@@ -134,16 +134,26 @@ class Assistant(Agent):
             logger.warning("No room available to send commands")
             return
         
+        if not self.room.local_participant:
+            logger.warning("No local participant available to send commands")
+            return
+        
         try:
+            logger.info(f"[Agent] Preparing to send commands: {commands.get('intent', 'unknown')}")
+            
             # Encode commands as JSON and send via data channel
             data_packet = json.dumps(commands).encode('utf-8')
+            logger.info(f"[Agent] Encoded data packet: {len(data_packet)} bytes")
+            
             await self.room.local_participant.publish_data(
                 data_packet,
                 reliable=True
             )
-            logger.info(f"Sent commands to frontend: {commands.get('intent', 'unknown')}")
+            logger.info(f"[Agent] Successfully sent commands to frontend: {commands.get('intent', 'unknown')}")
         except Exception as e:
-            logger.error(f"Failed to send commands to frontend: {e}")
+            logger.error(f"[Agent] Failed to send commands to frontend: {e}")
+            import traceback
+            logger.error(f"[Agent] Traceback: {traceback.format_exc()}")
     
     async def on_chat_received(self, message: llm.ChatMessage):
         """Override to track conversation and trigger orchestration"""

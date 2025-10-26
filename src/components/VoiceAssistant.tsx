@@ -6,6 +6,7 @@ import {
 	RoomAudioRenderer,
 	useRoomContext,
 } from "@livekit/components-react";
+import { RoomEvent } from "livekit-client";
 import "@livekit/components-styles";
 import { contextService } from "../services/contextService";
 import { toast } from "sonner";
@@ -216,28 +217,33 @@ export function VoiceAssistant({
 
 	return (
 		<>
+			{/* Compact floating voice module - persistent across navigation */}
 			<div
-				className="fixed inset-0 z-50 flex items-center justify-center"
-				style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+				className="fixed bottom-4 right-4 z-50"
+				style={{ pointerEvents: "all" }}>
 				<div
-					className="rounded-3xl p-8 shadow-2xl"
-					style={{ backgroundColor: "#405169", minWidth: "400px" }}>
+					className="rounded-2xl p-4 shadow-2xl"
+					style={{
+						backgroundColor: "#405169",
+						width: "280px",
+						maxHeight: "200px",
+					}}>
 					{/* Vintage Paper Texture Overlay */}
 					<div
-						className="absolute inset-0 opacity-[0.1] pointer-events-none rounded-3xl"
+						className="absolute inset-0 opacity-[0.1] pointer-events-none rounded-2xl"
 						style={{
 							backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' /%3E%3C/svg%3E")`,
 							mixBlendMode: "multiply",
 						}}
 					/>
 
-					<div className="relative flex flex-col items-center gap-6">
+					<div className="relative flex flex-col items-center gap-2">
 						<h3
 							className="text-white text-center"
 							style={{
 								fontFamily: "Cooper Black, Cooper Std, serif",
 								fontWeight: 900,
-								fontSize: "20px",
+								fontSize: "14px",
 							}}>
 							DoGood Companion
 						</h3>
@@ -271,45 +277,61 @@ function VoiceAssistantContent({
 	const { state, audioTrack } = useVoiceAssistant();
 	const room = useRoomContext();
 
-	// Listen for data messages from voice agent
+	// Listen for data messages from voice agent using correct RoomEvent enum
 	useEffect(() => {
-		if (!room) return;
+		if (!room) {
+			console.log("[VoiceAssistant] No room available yet");
+			return;
+		}
 
-		const handleData = (payload: Uint8Array) => {
+		console.log("[VoiceAssistant] Setting up data listener");
+
+		const handleData = (
+			payload: Uint8Array,
+			participant?: any,
+			kind?: number
+		) => {
+			console.log("[VoiceAssistant] Data received!", {
+				payloadLength: payload.length,
+				participant: participant?.identity,
+				kind,
+			});
 			onClaudeCommand(payload);
 		};
 
-		room.on("dataReceived", handleData);
+		room.on(RoomEvent.DataReceived, handleData);
+		console.log("[VoiceAssistant] Data listener registered");
 
 		return () => {
-			room.off("dataReceived", handleData);
+			console.log("[VoiceAssistant] Cleaning up data listener");
+			room.off(RoomEvent.DataReceived, handleData);
 		};
 	}, [room, onClaudeCommand]);
 
 	return (
-		<div className="flex flex-col items-center gap-6 w-full">
+		<div className="flex flex-col items-center gap-2 w-full">
 			{/* Audio Renderer - handles playback */}
 			<RoomAudioRenderer />
 
-			{/* Audio Visualizer */}
-			<div className="w-full flex justify-center" style={{ height: "80px" }}>
+			{/* Compact Audio Visualizer */}
+			<div className="w-full flex justify-center" style={{ height: "40px" }}>
 				{audioTrack && (
 					<BarVisualizer
 						state={state}
-						barCount={7}
+						barCount={5}
 						trackRef={audioTrack}
 						className="voice-assistant-visualizer"
 					/>
 				)}
 				{!audioTrack && (
-					<div className="flex items-center gap-2">
-						{[...Array(7)].map((_, i) => (
+					<div className="flex items-center gap-1">
+						{[...Array(5)].map((_, i) => (
 							<div
 								key={i}
-								className="w-2 rounded-full"
+								className="w-1.5 rounded-full"
 								style={{
 									backgroundColor: "#E8DC93",
-									height: state === "listening" ? "32px" : "16px",
+									height: state === "listening" ? "20px" : "8px",
 									animation:
 										state === "listening"
 											? `wave 0.6s ease-in-out infinite ${i * 0.1}s`
@@ -322,50 +344,43 @@ function VoiceAssistantContent({
 				)}
 			</div>
 
-			{/* State Display */}
+			{/* Compact State Display */}
 			<p
 				className="text-white text-center"
 				style={{
 					fontFamily: "Cooper Black, Cooper Std, serif",
 					fontWeight: 700,
-					fontSize: "16px",
+					fontSize: "12px",
 				}}>
 				{state === "listening" && "Listening..."}
 				{state === "thinking" && "Thinking..."}
 				{state === "speaking" && "Speaking..."}
-				{!state || state === "initializing" ? "Ready to help!" : ""}
+				{!state || state === "initializing" ? "Ready!" : ""}
 			</p>
 
-			{/* Powered by LiveKit */}
-			<p
-				className="text-white/80 text-center text-sm"
-				style={{ fontFamily: "Cooper Black, Cooper Std, serif" }}>
-				Powered by LiveKit
-			</p>
-
-			{/* End Convo Button */}
+			{/* Compact End Button */}
 			<button
 				onClick={onEndConvo}
-				className="rounded-full px-6 py-2 flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all active:scale-95"
+				className="rounded-full px-3 py-1 flex items-center justify-center gap-1 shadow-md hover:shadow-lg transition-all active:scale-95"
 				style={{
 					backgroundColor: "#9D5C45",
 					fontFamily: "Cooper Black, Cooper Std, serif",
 					fontWeight: 700,
 					color: "white",
-					fontSize: "14px",
-					letterSpacing: "0.3px",
+					fontSize: "11px",
+					letterSpacing: "0.2px",
 				}}>
-				End Conversation
+				End
 			</button>
 
 			<style>{`
         @keyframes wave {
-          0%, 100% { height: 16px; }
-          50% { height: 48px; }
+          0%, 100% { height: 8px; }
+          50% { height: 20px; }
         }
         .voice-assistant-visualizer {
           width: 100%;
-          max-width: 300px;
+          max-width: 200px;
         }
       `}</style>
 		</div>
