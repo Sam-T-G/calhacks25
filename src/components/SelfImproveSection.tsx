@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import {
@@ -11,11 +11,22 @@ import {
 	Heart,
 	CheckCircle,
 } from "lucide-react";
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
 import { PhotoVerification } from "./PhotoVerification";
 import dgLogo from "../assets/images/dglogo.png";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "./ui/alert-dialog";
 
 interface SelfImproveSectionProps {
 	onBack: () => void;
@@ -151,8 +162,14 @@ export function SelfImproveSection({
 				}}
 			/>
 
-			<div className="relative z-10 max-w-4xl mx-auto">
-				<div className="flex items-center justify-between mb-6">
+			{/* Fixed Header */}
+			<div
+				className="fixed top-0 left-0 right-0 z-50 px-6 md:px-8 py-4"
+				style={{
+					backgroundColor: "#E8DC93",
+					boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+				}}>
+				<div className="max-w-4xl mx-auto flex items-center justify-between">
 					<Button
 						variant="ghost"
 						onClick={onBack}
@@ -165,34 +182,81 @@ export function SelfImproveSection({
 						<ArrowLeft className="w-4 h-4 mr-2" />
 						Back
 					</Button>
-					<img
-						src={dgLogo}
-						alt="DoGood Logo"
-						className="h-12 w-auto drop-shadow-md"
-					/>
-				</div>
 
-				<div className="mb-6">
-					<h1
-						className="mb-1"
-						style={{
-							fontFamily: "Cooper Black, Cooper Std, serif",
-							fontWeight: 900,
-							fontSize: "32px",
-							color: "#405169",
-						}}>
-						Self-Improve
-					</h1>
-					<p
-						className="text-sm opacity-70"
-						style={{
-							fontFamily: "Cooper Black, Cooper Std, serif",
-							color: "#405169",
-						}}>
-						Personalized growth
-					</p>
-				</div>
+					<div className="flex-1 text-center">
+						<h1
+							className="mb-0"
+							style={{
+								fontFamily: "Cooper Black, Cooper Std, serif",
+								fontWeight: 900,
+								fontSize: "28px",
+								color: "#405169",
+							}}>
+							Self-Improve
+						</h1>
+						<p
+							className="text-xs opacity-70 mt-0"
+							style={{
+								fontFamily: "Cooper Black, Cooper Std, serif",
+								color: "#405169",
+							}}>
+							Build better habits and grow
+						</p>
+					</div>
 
+					<AlertDialog>
+						<AlertDialogTrigger asChild>
+							<button className="cursor-pointer hover:opacity-80 transition-opacity">
+								<img
+									src={dgLogo}
+									alt="DoGood Logo"
+									className="h-12 w-auto drop-shadow-md"
+								/>
+							</button>
+						</AlertDialogTrigger>
+						<AlertDialogContent className="max-w-md">
+							<AlertDialogHeader>
+								<AlertDialogTitle
+									style={{
+										fontFamily: "Cooper Black, Cooper Std, serif",
+										color: "#405169",
+									}}>
+									Return to Home?
+								</AlertDialogTitle>
+								<AlertDialogDescription
+									style={{
+										fontFamily: "Cooper Black, Cooper Std, serif",
+										color: "#405169",
+									}}>
+									Are you sure you want to go back to the main landing page? Any
+									unsaved progress may be lost.
+								</AlertDialogDescription>
+							</AlertDialogHeader>
+							<AlertDialogFooter>
+								<AlertDialogCancel
+									style={{
+										fontFamily: "Cooper Black, Cooper Std, serif",
+									}}>
+									Cancel
+								</AlertDialogCancel>
+								<AlertDialogAction
+									onClick={onBack}
+									style={{
+										backgroundColor: "#405169",
+										fontFamily: "Cooper Black, Cooper Std, serif",
+									}}>
+									Go Home
+								</AlertDialogAction>
+							</AlertDialogFooter>
+						</AlertDialogContent>
+					</AlertDialog>
+				</div>
+			</div>
+
+			{/* Content with top padding for fixed header */}
+			<div
+				className="relative z-10 max-w-4xl mx-auto px-6 md:px-8 pb-6"
+				style={{ paddingTop: "140px" }}>
 				{/* AI-Powered Insights */}
 				<Card
 					className="p-4 mb-6 text-white border-0 shadow-md"
@@ -305,7 +369,7 @@ export function SelfImproveSection({
 				{/* Weekly Goals */}
 				<div className="mb-4 flex items-center gap-2">
 					<Heart className="w-5 h-5" style={{ color: "#4A5A3C" }} />
-					<h3
+					<h2
 						style={{
 							fontFamily: "Cooper Black, Cooper Std, serif",
 							fontWeight: 900,
@@ -313,7 +377,7 @@ export function SelfImproveSection({
 							color: "#405169",
 						}}>
 						Weekly Goals
-					</h3>
+					</h2>
 				</div>
 
 				<div className="space-y-4">
@@ -368,7 +432,7 @@ export function SelfImproveSection({
 													{Math.round(progress)}%
 												</span>
 											</div>
-											<Progress value={progress} className="h-2" />
+											<Progress value={progress} className="h-3" />
 										</div>
 									</div>
 								</div>

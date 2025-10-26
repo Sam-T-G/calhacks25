@@ -12,6 +12,8 @@ export interface CommunityOpportunity {
 	requiresMultiple?: boolean; // If true, requires multiple completions
 	totalRequired?: number; // Total number of completions needed
 	progressDescription?: string; // e.g., "cans recycled", "meals served"
+	volunteersNeeded?: number; // Number of volunteers still needed
+	isVolunteerOpportunity?: boolean; // If true, this is a volunteer opportunity
 }
 
 export interface CrisisAlert {

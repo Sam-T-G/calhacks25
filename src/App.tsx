@@ -113,15 +113,23 @@ export default function App() {
 	};
 
 	return (
-		<div
-			className="min-h-screen relative"
-			style={{ backgroundColor: "#E8DC93" }}>
-			{renderSection()}
-			<VoiceAssistant
-				isActive={isVoiceAssistantActive}
-				onClose={() => setIsVoiceAssistantActive(false)}
-			/>
-			<Toaster />
-		</div>
+		<>
+			<style>{`
+				html, body {
+					background-color: #E8DC93;
+					overscroll-behavior: contain;
+				}
+			`}</style>
+			<div
+				className="min-h-screen relative"
+				style={{ backgroundColor: "#E8DC93" }}>
+				{renderSection()}
+				<VoiceAssistant
+					isActive={isVoiceAssistantActive}
+					onClose={() => setIsVoiceAssistantActive(false)}
+				/>
+				<Toaster />
+			</div>
+		</>
 	);
 }

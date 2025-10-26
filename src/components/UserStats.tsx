@@ -1,3 +1,4 @@
+import React from "react";
 import {
 	ArrowLeft,
 	TrendingUp,
@@ -10,6 +11,17 @@ import { Button } from "./ui/button";
 import { Progress } from "./ui/progress";
 import { Badge } from "./ui/badge";
 import dgLogo from "../assets/images/dglogo.png";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "./ui/alert-dialog";
 
 interface UserStatsProps {
 	xpPoints: number;
@@ -84,7 +96,7 @@ export function UserStats({ xpPoints, onBack }: UserStatsProps) {
 
 	return (
 		<div
-			className="min-h-screen p-6 md:p-8 relative"
+			className="min-h-screen relative"
 			style={{ backgroundColor: "#E8DC93" }}>
 			{/* Vintage Paper Texture Overlay */}
 			<div
@@ -95,8 +107,14 @@ export function UserStats({ xpPoints, onBack }: UserStatsProps) {
 				}}
 			/>
 
-			<div className="relative z-10 max-w-4xl mx-auto">
-				<div className="flex items-center justify-between mb-6">
+			{/* Fixed Header */}
+			<div
+				className="fixed top-0 left-0 right-0 z-50 px-6 md:px-8 py-4"
+				style={{
+					backgroundColor: "#E8DC93",
+					boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+				}}>
+				<div className="max-w-4xl mx-auto flex items-center justify-between">
 					<Button
 						variant="ghost"
 						onClick={onBack}
@@ -109,34 +127,73 @@ export function UserStats({ xpPoints, onBack }: UserStatsProps) {
 						<ArrowLeft className="w-4 h-4 mr-2" />
 						Back
 					</Button>
-					<img
-						src={dgLogo}
-						alt="DoGood Logo"
-						className="h-12 w-auto drop-shadow-md"
-					/>
-				</div>
 
-				<div className="mb-6">
-					<h1
-						className="mb-1"
-						style={{
-							fontFamily: "Cooper Black, Cooper Std, serif",
-							fontWeight: 900,
-							fontSize: "32px",
-							color: "#405169",
-						}}>
-						Your Progress
-					</h1>
-					<p
-						className="text-sm opacity-70"
-						style={{
-							fontFamily: "Cooper Black, Cooper Std, serif",
-							color: "#405169",
-						}}>
-						Track your journey
-					</p>
-				</div>
+					<div className="flex-1 text-center">
+						<h1
+							className="mb-0"
+							style={{
+								fontFamily: "Cooper Black, Cooper Std, serif",
+								fontWeight: 900,
+								fontSize: "28px",
+								color: "#405169",
+							}}>
+							Your Progress
+						</h1>
+					</div>
 
+					<AlertDialog>
+						<AlertDialogTrigger asChild>
+							<button className="cursor-pointer hover:opacity-80 transition-opacity">
+								<img
+									src={dgLogo}
+									alt="DoGood Logo"
+									className="h-12 w-auto drop-shadow-md"
+								/>
+							</button>
+						</AlertDialogTrigger>
+						<AlertDialogContent className="max-w-md">
+							<AlertDialogHeader>
+								<AlertDialogTitle
+									style={{
+										fontFamily: "Cooper Black, Cooper Std, serif",
+										color: "#405169",
+									}}>
+									Return to Home?
+								</AlertDialogTitle>
+								<AlertDialogDescription
+									style={{
+										fontFamily: "Cooper Black, Cooper Std, serif",
+										color: "#405169",
+									}}>
+									Are you sure you want to go back to the main landing page? Any
+									unsaved progress may be lost.
+								</AlertDialogDescription>
+							</AlertDialogHeader>
+							<AlertDialogFooter>
+								<AlertDialogCancel
+									style={{
+										fontFamily: "Cooper Black, Cooper Std, serif",
+									}}>
+									Cancel
+								</AlertDialogCancel>
+								<AlertDialogAction
+									onClick={onBack}
+									style={{
+										backgroundColor: "#405169",
+										fontFamily: "Cooper Black, Cooper Std, serif",
+									}}>
+									Go Home
+								</AlertDialogAction>
+							</AlertDialogFooter>
+						</AlertDialogContent>
+					</AlertDialog>
+				</div>
+			</div>
+
+			{/* Content with top padding for fixed header */}
+			<div
+				className="relative z-10 max-w-4xl mx-auto px-6 md:px-8 pb-6"
+				style={{ paddingTop: "140px" }}>
 				{/* XP Stats Cards */}
 				<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
 					<Card
@@ -311,7 +368,7 @@ export function UserStats({ xpPoints, onBack }: UserStatsProps) {
 									</div>
 
 									<div className="space-y-2">
-										<Progress value={progressPercent} className="h-2" />
+										<Progress value={progressPercent} className="h-3" />
 										<div
 											className="flex justify-between text-xs opacity-70"
 											style={{

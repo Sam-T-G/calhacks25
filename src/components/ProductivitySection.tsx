@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -13,10 +13,21 @@ import {
 	RotateCcw,
 	AlertCircle,
 } from "lucide-react";
-import { toast } from "sonner@2.0.3";
+import { toast } from "sonner";
 import { Badge } from "./ui/badge";
 import { PhotoVerification } from "./PhotoVerification";
 import dgLogo from "../assets/images/dglogo.png";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "./ui/alert-dialog";
 
 interface ProductivitySectionProps {
 	onBack: () => void;
@@ -194,7 +205,7 @@ export function ProductivitySection({
 
 	return (
 		<div
-			className="min-h-screen p-6 md:p-8 relative"
+			className="min-h-screen relative"
 			style={{ backgroundColor: "#E8DC93" }}>
 			{/* Vintage Paper Texture Overlay */}
 			<div
@@ -205,8 +216,14 @@ export function ProductivitySection({
 				}}
 			/>
 
-			<div className="relative z-10 max-w-4xl mx-auto">
-				<div className="flex items-center justify-between mb-6">
+			{/* Fixed Header */}
+			<div
+				className="fixed top-0 left-0 right-0 z-50 px-6 md:px-8 py-4"
+				style={{
+					backgroundColor: "#E8DC93",
+					boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+				}}>
+				<div className="max-w-4xl mx-auto flex items-center justify-between">
 					<Button
 						variant="ghost"
 						onClick={onBack}
@@ -219,34 +236,81 @@ export function ProductivitySection({
 						<ArrowLeft className="w-4 h-4 mr-2" />
 						Back
 					</Button>
-					<img
-						src={dgLogo}
-						alt="DoGood Logo"
-						className="h-12 w-auto drop-shadow-md"
-					/>
-				</div>
 
-				<div className="mb-6">
-					<h1
-						className="mb-1"
-						style={{
-							fontFamily: "Cooper Black, Cooper Std, serif",
-							fontWeight: 900,
-							fontSize: "32px",
-							color: "#405169",
-						}}>
-						Be Productive
-					</h1>
-					<p
-						className="text-sm opacity-70"
-						style={{
-							fontFamily: "Cooper Black, Cooper Std, serif",
-							color: "#405169",
-						}}>
-						Stay focused and accomplish
-					</p>
-				</div>
+					<div className="flex-1 text-center">
+						<h1
+							className="mb-0"
+							style={{
+								fontFamily: "Cooper Black, Cooper Std, serif",
+								fontWeight: 900,
+								fontSize: "28px",
+								color: "#405169",
+							}}>
+							Be Productive
+						</h1>
+						<p
+							className="text-xs opacity-70 mt-0"
+							style={{
+								fontFamily: "Cooper Black, Cooper Std, serif",
+								color: "#405169",
+							}}>
+							Focus and achieve your goals
+						</p>
+					</div>
 
+					<AlertDialog>
+						<AlertDialogTrigger asChild>
+							<button className="cursor-pointer hover:opacity-80 transition-opacity">
+								<img
+									src={dgLogo}
+									alt="DoGood Logo"
+									className="h-12 w-auto drop-shadow-md"
+								/>
+							</button>
+						</AlertDialogTrigger>
+						<AlertDialogContent className="max-w-md">
+							<AlertDialogHeader>
+								<AlertDialogTitle
+									style={{
+										fontFamily: "Cooper Black, Cooper Std, serif",
+										color: "#405169",
+									}}>
+									Return to Home?
+								</AlertDialogTitle>
+								<AlertDialogDescription
+									style={{
+										fontFamily: "Cooper Black, Cooper Std, serif",
+										color: "#405169",
+									}}>
+									Are you sure you want to go back to the main landing page? Any
+									unsaved progress may be lost.
+								</AlertDialogDescription>
+							</AlertDialogHeader>
+							<AlertDialogFooter>
+								<AlertDialogCancel
+									style={{
+										fontFamily: "Cooper Black, Cooper Std, serif",
+									}}>
+									Cancel
+								</AlertDialogCancel>
+								<AlertDialogAction
+									onClick={onBack}
+									style={{
+										backgroundColor: "#405169",
+										fontFamily: "Cooper Black, Cooper Std, serif",
+									}}>
+									Go Home
+								</AlertDialogAction>
+							</AlertDialogFooter>
+						</AlertDialogContent>
+					</AlertDialog>
+				</div>
+			</div>
+
+			{/* Content with top padding for fixed header */}
+			<div
+				className="relative z-10 max-w-4xl mx-auto px-6 md:px-8 pb-6"
+				style={{ paddingTop: "140px" }}>
 				{/* Focus Timer - Modern Layout */}
 				<Card
 					className="p-6 mb-6 border-0 shadow-xl rounded-2xl relative overflow-hidden"
@@ -300,25 +364,15 @@ export function ProductivitySection({
 					{/* Timer Display - Top */}
 					<div className="text-center mb-8">
 						<div
-							className="text-9xl mb-4 tracking-tight"
 							style={{
 								fontFamily: "Cooper Black, Cooper Std, serif",
 								fontWeight: 900,
 								color: "#3B3766",
 								textShadow: "2px 2px 4px rgba(0,0,0,0.1)",
+								fontSize: "clamp(6rem, 20vw, 12rem)",
+								lineHeight: 1,
 							}}>
 							{formatTime(timeLeft)}
-						</div>
-						<div
-							className="w-full rounded-full h-3 overflow-hidden"
-							style={{ backgroundColor: "#E8DC93" }}>
-							<div
-								className="h-3 rounded-full transition-all duration-1000"
-								style={{
-									width: `${progress}%`,
-									backgroundColor: "#3B3766",
-								}}
-							/>
 						</div>
 					</div>
 

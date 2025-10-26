@@ -17,6 +17,17 @@ import { PhotoVerification } from "./PhotoVerification";
 import { claudeService } from "../services/claudeService";
 import { ServeActivities, UserPreferences } from "../types/serve";
 import dgLogo from "../assets/images/dglogo.png";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from "./ui/alert-dialog";
 
 interface ServeSectionProps {
 	onBack: () => void;
@@ -38,6 +49,15 @@ export function ServeSection({
 	const [activities, setActivities] = useState<ServeActivities | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
 	const [isRegenerating, setIsRegenerating] = useState(false);
+	const [pullDistance, setPullDistance] = useState(0);
+	const [isPulling, setIsPulling] = useState(false);
+	const [startY, setStartY] = useState(0);
+	const [signedUpActivities, setSignedUpActivities] = useState<Set<string>>(
+		new Set()
+	);
+	const [volunteerCounts, setVolunteerCounts] = useState<Map<string, number>>(
+		new Map()
+	);
 
 	// Memoize loadActivities to prevent unnecessary re-renders
 	const loadActivities = useCallback(async () => {
@@ -82,6 +102,40 @@ export function ServeSection({
 		}
 	};
 
+	// Pull-to-refresh functionality
+	const handleTouchStart = (e: React.TouchEvent) => {
+		const scrollElement = document.documentElement;
+		const atBottom =
+			scrollElement.scrollHeight - scrollElement.scrollTop <=
+			scrollElement.clientHeight + 50;
+
+		if (atBottom) {
+			setStartY(e.touches[0].clientY);
+			setIsPulling(true);
+		}
+	};
+
+	const handleTouchMove = (e: React.TouchEvent) => {
+		if (!isPulling || isRegenerating) return;
+
+		const currentY = e.touches[0].clientY;
+		const distance = startY - currentY;
+
+		if (distance > 0) {
+			setPullDistance(Math.min(distance, 100));
+		}
+	};
+
+	const handleTouchEnd = () => {
+		if (isPulling && pullDistance >= 60 && !isRegenerating) {
+			handleRegenerate();
+		}
+
+		setIsPulling(false);
+		setPullDistance(0);
+		setStartY(0);
+	};
+
 	const handleComplete = (
 		id: string,
 		scaledXP: number,
@@ -113,6 +167,27 @@ export function ServeSection({
 		}
 	};
 
+	const handleSignUp = (
+		id: string,
+		volunteersNeeded: number,
+		title: string
+	) => {
+		if (signedUpActivities.has(id)) {
+			toast.error("Already signed up", {
+				description: "You've already signed up for this opportunity!",
+			});
+			return;
+		}
+
+		const newCount = Math.max(0, volunteersNeeded - 1);
+		setVolunteerCounts(new Map(volunteerCounts.set(id, newCount)));
+		setSignedUpActivities(new Set(signedUpActivities).add(id));
+
+		toast.success("Signed up successfully!", {
+			description: `You're registered for ${title}`,
+		});
+	};
+
 	// Filter out completed items
 	const communityOpportunities =
 		activities?.communityOpportunities.filter(
@@ -128,8 +203,11 @@ export function ServeSection({
 
 	return (
 		<div
-			className="min-h-screen p-6 md:p-8 relative"
-			style={{ backgroundColor: "#E8DC93" }}>
+			className="min-h-screen relative"
+			style={{ backgroundColor: "#E8DC93" }}
+			onTouchStart={handleTouchStart}
+			onTouchMove={handleTouchMove}
+			onTouchEnd={handleTouchEnd}>
 			{/* Vintage Paper Texture Overlay */}
 			<div
 				className="absolute inset-0 opacity-[0.15] pointer-events-none"
@@ -139,8 +217,14 @@ export function ServeSection({
 				}}
 			/>
 
-			<div className="relative z-10 max-w-4xl mx-auto">
-				<div className="flex items-center justify-between mb-6">
+			{/* Fixed Header */}
+			<div
+				className="fixed top-0 left-0 right-0 z-50 px-6 md:px-8 py-4"
+				style={{
+					backgroundColor: "#E8DC93",
+					boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+				}}>
+				<div className="max-w-4xl mx-auto flex items-center justify-between">
 					<Button
 						variant="ghost"
 						onClick={onBack}
@@ -153,27 +237,20 @@ export function ServeSection({
 						<ArrowLeft className="w-4 h-4 mr-2" />
 						Back
 					</Button>
-					<img
-						src={dgLogo}
-						alt="DoGood Logo"
-						className="h-12 w-auto drop-shadow-md"
-					/>
-				</div>
 
-				<div className="mb-6 flex justify-between items-start">
-					<div>
+					<div className="flex-1 text-center">
 						<h1
-							className="mb-1"
+							className="mb-0"
 							style={{
 								fontFamily: "Cooper Black, Cooper Std, serif",
 								fontWeight: 900,
-								fontSize: "32px",
+								fontSize: "28px",
 								color: "#405169",
 							}}>
 							Serve
 						</h1>
 						<p
-							className="text-sm opacity-70"
+							className="text-xs opacity-70 mt-0"
 							style={{
 								fontFamily: "Cooper Black, Cooper Std, serif",
 								color: "#405169",
@@ -181,23 +258,60 @@ export function ServeSection({
 							Make a positive impact
 						</p>
 					</div>
-					<Button
-						onClick={handleRegenerate}
-						disabled={isRegenerating || isLoading}
-						size="sm"
-						className="border-0"
-						style={{
-							backgroundColor: "#405169",
-							fontFamily: "Cooper Black, Cooper Std, serif",
-							fontWeight: 700,
-						}}>
-						<RefreshCw
-							className={`w-4 h-4 mr-2 ${isRegenerating ? "animate-spin" : ""}`}
-						/>
-						Refresh
-					</Button>
-				</div>
 
+					<AlertDialog>
+						<AlertDialogTrigger asChild>
+							<button className="cursor-pointer hover:opacity-80 transition-opacity">
+								<img
+									src={dgLogo}
+									alt="DoGood Logo"
+									className="h-12 w-auto drop-shadow-md"
+								/>
+							</button>
+						</AlertDialogTrigger>
+						<AlertDialogContent className="max-w-md">
+							<AlertDialogHeader>
+								<AlertDialogTitle
+									style={{
+										fontFamily: "Cooper Black, Cooper Std, serif",
+										color: "#405169",
+									}}>
+									Return to Home?
+								</AlertDialogTitle>
+								<AlertDialogDescription
+									style={{
+										fontFamily: "Cooper Black, Cooper Std, serif",
+										color: "#405169",
+									}}>
+									Are you sure you want to go back to the main landing page? Any
+									unsaved progress may be lost.
+								</AlertDialogDescription>
+							</AlertDialogHeader>
+							<AlertDialogFooter>
+								<AlertDialogCancel
+									style={{
+										fontFamily: "Cooper Black, Cooper Std, serif",
+									}}>
+									Cancel
+								</AlertDialogCancel>
+								<AlertDialogAction
+									onClick={onBack}
+									style={{
+										backgroundColor: "#405169",
+										fontFamily: "Cooper Black, Cooper Std, serif",
+									}}>
+									Go Home
+								</AlertDialogAction>
+							</AlertDialogFooter>
+						</AlertDialogContent>
+					</AlertDialog>
+				</div>
+			</div>
+
+			{/* Content with top padding for fixed header */}
+			<div
+				className="relative z-10 max-w-4xl mx-auto px-6 md:px-8 pb-6"
+				style={{ paddingTop: "140px" }}>
 				{isLoading ? (
 					<div className="flex items-center justify-center py-12">
 						<div className="text-center">
@@ -311,6 +425,24 @@ export function ServeSection({
 															{opp.duration}
 														</span>
 													</div>
+													{opp.isVolunteerOpportunity &&
+														opp.volunteersNeeded !== undefined && (
+															<div className="flex items-center gap-1">
+																<Badge
+																	className="text-xs border-0"
+																	style={{
+																		backgroundColor: "#3B3766",
+																		color: "white",
+																		fontFamily:
+																			"Cooper Black, Cooper Std, serif",
+																		fontWeight: 700,
+																	}}>
+																	{volunteerCounts.get(opp.id) ??
+																		opp.volunteersNeeded}{" "}
+																	volunteers needed
+																</Badge>
+															</div>
+														)}
 												</div>
 												<Badge
 													variant="secondary"
@@ -351,7 +483,7 @@ export function ServeSection({
 																opp.totalRequired) *
 															100
 														}
-														className="h-2"
+														className="h-3"
 													/>
 												</div>
 											)}
@@ -367,29 +499,59 @@ export function ServeSection({
 													}}>
 													+{opp.xp} XP{opp.requiresMultiple && " total"}
 												</Badge>
-												<PhotoVerification
-													taskTitle={opp.title}
-													taskDescription={`Volunteer at ${opp.location} for ${opp.duration}`}
-													xpReward={
-														opp.requiresMultiple && opp.totalRequired
-															? Math.round(opp.xp / opp.totalRequired)
-															: opp.xp
-													}
-													isMultiStep={opp.requiresMultiple}
-													currentProgress={activityProgress.get(opp.id) || 0}
-													totalRequired={opp.totalRequired || 1}
-													onVerified={() =>
-														handleComplete(
-															opp.id,
+												<div className="flex gap-2">
+													{opp.isVolunteerOpportunity &&
+														opp.volunteersNeeded !== undefined && (
+															<Button
+																size="sm"
+																disabled={signedUpActivities.has(opp.id)}
+																onClick={() =>
+																	handleSignUp(
+																		opp.id,
+																		volunteerCounts.get(opp.id) ??
+																			opp.volunteersNeeded!,
+																		opp.title
+																	)
+																}
+																className="border-0"
+																style={{
+																	backgroundColor: signedUpActivities.has(
+																		opp.id
+																	)
+																		? "#D4C883"
+																		: "#3B3766",
+																	fontFamily: "Cooper Black, Cooper Std, serif",
+																	fontWeight: 700,
+																}}>
+																{signedUpActivities.has(opp.id)
+																	? "Signed Up"
+																	: "Sign Up"}
+															</Button>
+														)}
+													<PhotoVerification
+														taskTitle={opp.title}
+														taskDescription={`Volunteer at ${opp.location} for ${opp.duration}`}
+														xpReward={
 															opp.requiresMultiple && opp.totalRequired
 																? Math.round(opp.xp / opp.totalRequired)
-																: opp.xp,
-															opp.requiresMultiple,
-															opp.totalRequired
-														)
-													}
-													buttonOnly={true}
-												/>
+																: opp.xp
+														}
+														isMultiStep={opp.requiresMultiple}
+														currentProgress={activityProgress.get(opp.id) || 0}
+														totalRequired={opp.totalRequired || 1}
+														onVerified={() =>
+															handleComplete(
+																opp.id,
+																opp.requiresMultiple && opp.totalRequired
+																	? Math.round(opp.xp / opp.totalRequired)
+																	: opp.xp,
+																opp.requiresMultiple,
+																opp.totalRequired
+															)
+														}
+														buttonOnly={true}
+													/>
+												</div>
 											</div>
 										</div>
 									</Card>
@@ -687,6 +849,38 @@ export function ServeSection({
 							)}
 						</TabsContent>
 					</Tabs>
+				)}
+
+				{/* Pull to Refresh Indicator */}
+				{isPulling && (
+					<div
+						className="fixed bottom-0 left-0 right-0 flex justify-center py-4 transition-opacity"
+						style={{
+							backgroundColor: "#E8DC93",
+							opacity: pullDistance / 100,
+							pointerEvents: "none",
+						}}>
+						<div className="flex items-center gap-2">
+							<RefreshCw
+								className="w-5 h-5"
+								style={{
+									color: "#405169",
+									transform: `rotate(${pullDistance * 3.6}deg)`,
+								}}
+							/>
+							<span
+								style={{
+									fontFamily: "Cooper Black, Cooper Std, serif",
+									fontWeight: 700,
+									color: "#405169",
+									fontSize: "14px",
+								}}>
+								{pullDistance >= 60
+									? "Release to refresh"
+									: "Pull up to refresh"}
+							</span>
+						</div>
+					</div>
 				)}
 			</div>
 		</div>
