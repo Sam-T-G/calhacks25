@@ -1,4 +1,5 @@
 import { ServeActivities, UserPreferences } from "../types/serve";
+import { contextService } from "./contextService";
 
 // Use backend proxy in production, direct API in development (will fail with CORS, falls back to mock)
 const API_ENDPOINT =
@@ -313,6 +314,9 @@ export class ClaudeService {
 	private buildGenerationPrompt(preferences?: UserPreferences): string {
 		const basePrompt = `Generate a diverse set of community service activities for a gamified volunteering app. `;
 
+		// Get user context for personalization
+		const userContext = contextService.getContextForLLM();
+
 		let preferencesText = "";
 		if (preferences) {
 			const parts: string[] = [];
@@ -334,10 +338,13 @@ export class ClaudeService {
 			}
 		}
 
+		// Add context section
+		const contextSection = userContext ? `\n\n${userContext}\n` : '';
+
 		return `${basePrompt}${
 			preferencesText ||
 			"\n\nNo specific user preferences provided, so generate a diverse, interesting mix."
-		}
+		}${contextSection}
 
 Please generate activities in the following JSON format:
 
