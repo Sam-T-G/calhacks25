@@ -33,7 +33,52 @@ export function ProductivitySection({
 	const [completedTasks, setCompletedTasks] = useState<Set<string>>(new Set());
 	const [showError, setShowError] = useState(false);
 
-	// Suggested tasks based on "calendar data" - limit to 2
+	// Generic productive task suggestions for dropdown
+	const taskSuggestions = [
+		"Exercise",
+		"Read a book",
+		"Submit assignment",
+		"Work on project",
+		"Study for exam",
+		"Practice hobby",
+		"Meditate",
+		"Write journal",
+		"Learn new skill",
+		"Review notes",
+		"Plan week",
+		"Organize workspace",
+		"Practice instrument",
+		"Code project",
+		"Design mockup",
+		"Write blog post",
+		"Research topic",
+		"Take online course",
+		"Practice language",
+		"Work on side project",
+	];
+
+	const [showSuggestions, setShowSuggestions] = useState(false);
+	const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
+
+	const handleTaskInputChange = (value: string) => {
+		setTaskName(value);
+		if (value.trim().length > 0) {
+			const filtered = taskSuggestions.filter((suggestion) =>
+				suggestion.toLowerCase().includes(value.toLowerCase())
+			);
+			setFilteredSuggestions(filtered);
+			setShowSuggestions(filtered.length > 0);
+		} else {
+			setShowSuggestions(false);
+		}
+	};
+
+	const selectSuggestion = (suggestion: string) => {
+		setTaskName(suggestion);
+		setShowSuggestions(false);
+	};
+
+	// Suggested tasks based on "calendar data" - 4 tasks
 	const allSuggestedTasks = [
 		{
 			id: "t1",
@@ -51,6 +96,22 @@ export function ProductivitySection({
 			category: "Work",
 			color: "#3B3766",
 		},
+		{
+			id: "t3",
+			title: "Update Project Documentation",
+			lastDone: "15 days ago",
+			xp: 60,
+			category: "Work",
+			color: "#3B3766",
+		},
+		{
+			id: "t4",
+			title: "Exercise Routine",
+			lastDone: "5 days ago",
+			xp: 90,
+			category: "Personal",
+			color: "#4A5A3C",
+		},
 	];
 
 	const suggestedTasks = allSuggestedTasks.filter(
@@ -59,6 +120,7 @@ export function ProductivitySection({
 
 	const handleTaskClick = (title: string) => {
 		setTaskName(title);
+		setShowSuggestions(false);
 	};
 
 	useEffect(() => {
@@ -177,132 +239,231 @@ export function ProductivitySection({
 					</p>
 				</div>
 
-				{/* Focus Timer */}
+				{/* Focus Timer - Modern Layout */}
 				<Card
-					className="p-5 mb-6 border-0 shadow-md relative"
+					className="p-6 mb-6 border-0 shadow-xl rounded-2xl relative overflow-hidden"
 					style={{ backgroundColor: "#FAF7EB" }}>
+					{/* Modern gradient accent */}
+					<div
+						className="absolute top-0 left-0 right-0 h-1"
+						style={{
+							background:
+								"linear-gradient(90deg, #3B3766 0%, #9D5C45 50%, #4A5A3C 100%)",
+						}}
+					/>
+
 					{/* Error message */}
 					{showError && (
 						<div
-							className="absolute -top-2 left-0 right-0 mx-4 p-3 rounded-lg shadow-lg z-10 flex items-center gap-2"
+							className="absolute -top-3 left-4 right-4 p-3 rounded-xl shadow-lg z-20 flex items-center gap-2 animate-bounce"
 							style={{ backgroundColor: "#9D5C45" }}>
 							<AlertCircle className="w-4 h-4 text-white flex-shrink-0" />
-							<p
+							<span
 								className="text-white text-sm"
 								style={{
 									fontFamily: "Cooper Black, Cooper Std, serif",
 									fontWeight: 700,
 								}}>
-								Please enter what you're working on first!
-							</p>
+								Please enter a task name to start the timer
+							</span>
 						</div>
 					)}
 
-					<div className="flex items-center gap-2 mb-4">
-						<Timer className="w-5 h-5" style={{ color: "#3B3766" }} />
-						<h3
+					{/* Header */}
+					<div className="flex items-center justify-between mb-6">
+						<div className="flex items-center gap-3">
+							<div
+								className="p-2 rounded-xl"
+								style={{ backgroundColor: "#E8DC93" }}>
+								<Timer className="w-6 h-6" style={{ color: "#3B3766" }} />
+							</div>
+							<h3
+								style={{
+									fontFamily: "Cooper Black, Cooper Std, serif",
+									fontWeight: 900,
+									fontSize: "24px",
+									color: "#405169",
+								}}>
+								Focus Timer
+							</h3>
+						</div>
+					</div>
+
+					{/* Timer Display - Top */}
+					<div className="text-center mb-8">
+						<div
+							className="text-7xl mb-4 tracking-tight"
 							style={{
 								fontFamily: "Cooper Black, Cooper Std, serif",
 								fontWeight: 900,
-								fontSize: "20px",
-								color: "#405169",
+								color: "#3B3766",
+								textShadow: "2px 2px 4px rgba(0,0,0,0.1)",
 							}}>
-							Focus Timer
-						</h3>
+							{formatTime(timeLeft)}
+						</div>
+						<div
+							className="w-full rounded-full h-3 overflow-hidden"
+							style={{ backgroundColor: "#E8DC93" }}>
+							<div
+								className="h-3 rounded-full transition-all duration-1000 relative overflow-hidden"
+								style={{
+									width: `${progress}%`,
+									background:
+										"linear-gradient(90deg, #3B3766 0%, #4A5A3C 100%)",
+								}}>
+								<div
+									className="absolute inset-0 opacity-20"
+									style={{
+										background:
+											"repeating-linear-gradient(90deg, transparent, transparent 10px, rgba(255,255,255,0.3) 10px, rgba(255,255,255,0.3) 20px)",
+										animation: "shimmer 2s linear infinite",
+									}}
+								/>
+							</div>
+						</div>
 					</div>
 
-					<div className="mb-4">
-						<Input
-							placeholder="What are you working on? *"
-							value={taskName}
-							onChange={(e) => setTaskName(e.target.value)}
-							className="mb-3 h-10 border-2"
-							style={{
-								borderColor: "#C4B77D",
-								backgroundColor: "#FFFFFF",
-								fontFamily: "Cooper Black, Cooper Std, serif",
-							}}
-						/>
-						<div className="flex gap-2 items-center text-sm">
-							<span
-								className="text-xs opacity-70"
+					{/* Input Section - Middle */}
+					<div className="mb-6 space-y-4">
+						{/* Task Input with Suggestions */}
+						<div className="relative">
+							<label
+								className="block mb-2 text-sm font-semibold"
 								style={{
 									color: "#405169",
 									fontFamily: "Cooper Black, Cooper Std, serif",
 								}}>
-								Duration:
-							</span>
+								What are you working on? *
+							</label>
 							<Input
-								type="number"
-								value={customMinutes}
-								onChange={(e) => handleSetTimer(e.target.value)}
-								className="w-16 h-9 text-sm border-2"
+								placeholder="Type or select a task..."
+								value={taskName}
+								onChange={(e) => handleTaskInputChange(e.target.value)}
+								onFocus={() => {
+									if (taskName.trim().length > 0) {
+										const filtered = taskSuggestions.filter((suggestion) =>
+											suggestion.toLowerCase().includes(taskName.toLowerCase())
+										);
+										setFilteredSuggestions(filtered);
+										setShowSuggestions(filtered.length > 0);
+									}
+								}}
+								onBlur={() => {
+									// Delay to allow click on suggestion
+									setTimeout(() => setShowSuggestions(false), 200);
+								}}
+								className="h-12 border-2 rounded-xl text-base shadow-sm"
 								style={{
 									borderColor: "#C4B77D",
 									backgroundColor: "#FFFFFF",
 									fontFamily: "Cooper Black, Cooper Std, serif",
 								}}
+							/>
+
+							{/* Dropdown Suggestions */}
+							{showSuggestions && filteredSuggestions.length > 0 && (
+								<div
+									className="absolute z-10 w-full mt-1 rounded-xl border-2 shadow-lg max-h-48 overflow-y-auto"
+									style={{
+										backgroundColor: "#FFFFFF",
+										borderColor: "#C4B77D",
+									}}>
+									{filteredSuggestions.map((suggestion, index) => (
+										<button
+											key={index}
+											onClick={() => selectSuggestion(suggestion)}
+											className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b last:border-b-0"
+											style={{
+												fontFamily: "Cooper Black, Cooper Std, serif",
+												color: "#405169",
+												borderColor: "#E8DC93",
+											}}>
+											{suggestion}
+										</button>
+									))}
+								</div>
+							)}
+						</div>
+
+						{/* Duration Selector */}
+						<div className="flex items-center gap-3">
+							<label
+								className="text-sm font-semibold whitespace-nowrap"
+								style={{
+									color: "#405169",
+									fontFamily: "Cooper Black, Cooper Std, serif",
+								}}>
+								Duration:
+							</label>
+							<Input
+								type="number"
+								value={customMinutes}
+								onChange={(e) => handleSetTimer(e.target.value)}
+								className="w-24 h-10 text-center border-2 rounded-xl font-bold"
+								style={{
+									borderColor: "#C4B77D",
+									backgroundColor: "#FFFFFF",
+									fontFamily: "Cooper Black, Cooper Std, serif",
+									fontSize: "16px",
+								}}
 								min="1"
-								max="180"
-								disabled={isRunning}
+								max="120"
 							/>
 							<span
-								className="text-xs opacity-70"
+								className="text-sm font-semibold"
 								style={{
 									color: "#405169",
 									fontFamily: "Cooper Black, Cooper Std, serif",
 								}}>
 								minutes
 							</span>
+							{/* Quick duration buttons */}
+							<div className="flex gap-1 ml-auto">
+								{[15, 25, 45].map((mins) => (
+									<button
+										key={mins}
+										onClick={() => !isRunning && handleSetTimer(String(mins))}
+										disabled={isRunning}
+										className="px-3 py-1 rounded-lg text-xs font-bold transition-all hover:scale-105 disabled:opacity-50"
+										style={{
+											backgroundColor:
+												customMinutes === String(mins) ? "#3B3766" : "#E8DC93",
+											color:
+												customMinutes === String(mins) ? "white" : "#405169",
+											fontFamily: "Cooper Black, Cooper Std, serif",
+										}}>
+										{mins}m
+									</button>
+								))}
+							</div>
 						</div>
 					</div>
 
-					<div className="text-center mb-4">
-						<div
-							className="text-5xl mb-3"
-							style={{
-								fontFamily: "Cooper Black, Cooper Std, serif",
-								fontWeight: 900,
-								color: "#405169",
-							}}>
-							{formatTime(timeLeft)}
-						</div>
-						<div
-							className="w-full rounded-full h-2 mb-4"
-							style={{ backgroundColor: "#D4C883" }}>
-							<div
-								className="h-2 rounded-full transition-all duration-1000"
-								style={{ width: `${progress}%`, backgroundColor: "#3B3766" }}
-							/>
-						</div>
-					</div>
-
-					<div className="flex gap-2 justify-center">
+					{/* Control Buttons - Bottom */}
+					<div className="flex gap-3">
 						<Button
 							onClick={handleStartTimer}
-							className="h-10 flex-1 border-0"
+							className="h-14 flex-1 border-0 rounded-xl text-base shadow-lg hover:shadow-xl transition-all hover:scale-105"
 							style={{
-								backgroundColor: "#3B3766",
+								background: "linear-gradient(135deg, #3B3766 0%, #4A5A3C 100%)",
 								fontFamily: "Cooper Black, Cooper Std, serif",
 								fontWeight: 700,
-								boxShadow: "0 4px 6px rgba(0,0,0,0.15)",
 							}}>
 							{isRunning ? (
 								<>
-									<Pause className="w-4 h-4 mr-2" />
+									<Pause className="w-5 h-5 mr-2" />
 									Pause
 								</>
 							) : (
 								<>
-									<Play className="w-4 h-4 mr-2" />
-									Start
+									<Play className="w-5 h-5 mr-2" />
+									Start Focus
 								</>
 							)}
 						</Button>
 						<Button
 							onClick={handleReset}
-							variant="outline"
-							className="h-10 flex-1"
+							className="h-14 px-6 rounded-xl border-2 shadow-lg hover:shadow-xl transition-all hover:scale-105"
 							style={{
 								borderColor: "#C4B77D",
 								backgroundColor: "#FFFFFF",
@@ -310,10 +471,16 @@ export function ProductivitySection({
 								fontFamily: "Cooper Black, Cooper Std, serif",
 								fontWeight: 700,
 							}}>
-							<RotateCcw className="w-4 h-4 mr-2" />
-							Reset
+							<RotateCcw className="w-5 h-5" />
 						</Button>
 					</div>
+
+					<style>{`
+            @keyframes shimmer {
+              0% { transform: translateX(-100%); }
+              100% { transform: translateX(100%); }
+            }
+          `}</style>
 				</Card>
 
 				{/* Suggested Tasks */}
