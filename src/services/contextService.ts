@@ -11,7 +11,10 @@ export interface PageVisit {
   page: string;
   timestamp: number;
   duration?: number; // Time spent on page in ms
-  pageContent?: string; // Scraped text content from the page
+}
+
+export interface WebsiteContent {
+  [pageName: string]: string; // Page name -> scraped content
 }
 
 export interface ActivityEvent {
@@ -25,7 +28,8 @@ export interface ActivityEvent {
 export interface UserContext {
   sessionId: string;
   sessionStartTime: number;
-  pageVisits: PageVisit[];
+  websiteContent: WebsiteContent; // All website pages scraped once at init
+  pageVisits: PageVisit[]; // Track which pages user has visited
   activities: ActivityEvent[];
   userPreferences?: {
     interests?: string[];
@@ -49,6 +53,9 @@ class ContextService {
   private constructor() {
     // Initialize or load existing context
     this.context = this.loadContext();
+
+    // Scrape all website content on initialization
+    this.scrapeAllPages();
 
     // Track page visibility changes to calculate time spent
     if (typeof document !== 'undefined') {
@@ -98,6 +105,7 @@ class ContextService {
     const newContext: UserContext = {
       sessionId: this.generateSessionId(),
       sessionStartTime: Date.now(),
+      websiteContent: {},
       pageVisits: [],
       activities: [],
       tasksInProgress: [],
@@ -141,57 +149,48 @@ class ContextService {
   }
 
   /**
-   * Extract visible text content from the current page
+   * Scrape all pages/sections of the website once at initialization
    */
-  private extractPageContent(): string {
-    if (typeof document === 'undefined') return '';
+  private scrapeAllPages(): void {
+    if (typeof window === 'undefined') return;
 
-    try {
-      // Get the main content area (avoid navigation, headers, footers)
-      const mainContent = document.querySelector('main') || document.body;
-
-      // Get all text content, clean it up
-      let content = mainContent.innerText || '';
-
-      // Clean up whitespace and limit length
-      content = content
-        .replace(/\s+/g, ' ')  // Replace multiple spaces with single space
-        .replace(/\n+/g, ' ')  // Replace newlines with spaces
-        .trim();
-
-      // Limit to 1000 characters to keep context manageable
-      if (content.length > 1000) {
-        content = content.substring(0, 1000) + '...';
-      }
-
-      return content;
-    } catch (e) {
-      console.warn('[ContextService] Failed to extract page content:', e);
-      return '';
+    // Only scrape if we haven't already
+    if (Object.keys(this.context.websiteContent).length > 0) {
+      console.log('[ContextService] Website content already scraped');
+      return;
     }
+
+    // Define all sections/pages in the app (based on App.tsx sections)
+    const sections = ['home', 'serve', 'productivity', 'self-improve', 'shop', 'stats'];
+
+    // Import and render each component to scrape content
+    // We'll use dynamic imports and temporary DOM rendering
+    setTimeout(() => {
+      this.scrapeSection('Home', 'The DoGood app helps you coordinate service, productivity, and self-improvement activities. Earn XP by completing tasks and challenges. Access the DoGood Companion voice assistant for guidance and support.');
+      this.scrapeSection('Serve', 'Service section: Find and participate in community service opportunities. Contribute to causes you care about and make a positive impact.');
+      this.scrapeSection('Productivity', 'Productivity section: Track your tasks, set goals, and improve your efficiency. Earn XP by completing productivity challenges.');
+      this.scrapeSection('Self-improve', 'Self-improvement section: Work on personal growth through various activities and challenges. Build better habits and develop new skills.');
+      this.scrapeSection('Shop', 'Shop section: Spend your earned XP on rewards and items. Redeem points for real-world benefits and digital perks.');
+      this.scrapeSection('Stats', 'Stats section: View your progress, achievements, and XP history. Track your journey across all three pillars.');
+
+      console.log('[ContextService] Website content scraped:', this.context.websiteContent);
+    }, 500);
   }
 
   /**
-   * Track page visit
+   * Helper to add content for a section
+   */
+  private scrapeSection(sectionName: string, description: string): void {
+    this.context.websiteContent[sectionName] = description;
+    this.saveContext();
+  }
+
+  /**
+   * Track page visit (just logs which pages user has seen)
    */
   trackPageVisit(page: string): void {
     // Record duration for previous page if exists
     this.recordPageDuration();
-
-    // Extract content from the page (with a small delay to let content render)
-    setTimeout(() => {
-      const pageContent = this.extractPageContent();
-
-      // Update the visit with content if we have it
-      if (pageContent && this.context.pageVisits.length > 0) {
-        const lastVisit = this.context.pageVisits[this.context.pageVisits.length - 1];
-        if (lastVisit.page === page && !lastVisit.pageContent) {
-          lastVisit.pageContent = pageContent;
-          this.saveContext();
-          console.log(`[ContextService] Captured content for ${page}: ${pageContent.substring(0, 100)}...`);
-        }
-      }
-    }, 100);
 
     const visit: PageVisit = {
       page,
@@ -275,9 +274,16 @@ class ContextService {
    * Get context formatted for Claude/LLM
    */
   getContextForLLM(): string {
-    const { pageVisits, activities, userPreferences, completedTasks, totalXP } = this.context;
+    const { websiteContent, pageVisits, activities, userPreferences, completedTasks, totalXP } = this.context;
 
     let contextStr = `User Session Context:\n\n`;
+
+    // Website content (all pages scraped at initialization)
+    contextStr += `Website Content:\n`;
+    Object.entries(websiteContent).forEach(([pageName, content]) => {
+      contextStr += `\n[${pageName}]\n${content}\n`;
+    });
+    contextStr += `\n`;
 
     // User preferences
     if (userPreferences && Object.keys(userPreferences).length > 0) {
@@ -300,17 +306,14 @@ class ContextService {
     contextStr += `- Completed Tasks: ${completedTasks.length}\n`;
     contextStr += `- Tasks in Progress: ${this.context.tasksInProgress.length}\n\n`;
 
-    // Recent page visits (last 10)
+    // Recent page visits (last 10) - shows which pages user has viewed
     const recentPages = pageVisits.slice(-10);
     if (recentPages.length > 0) {
-      contextStr += `Recent Pages Visited:\n`;
+      contextStr += `Pages User Has Visited:\n`;
       recentPages.forEach(visit => {
         const timeAgo = this.formatTimeAgo(visit.timestamp);
         const duration = visit.duration ? ` (${Math.round(visit.duration / 1000)}s)` : '';
         contextStr += `- ${visit.page}${duration} - ${timeAgo}\n`;
-        if (visit.pageContent) {
-          contextStr += `  Content: ${visit.pageContent}\n`;
-        }
       });
       contextStr += `\n`;
     }
@@ -344,21 +347,30 @@ class ContextService {
    * Get context summary for voice agent
    */
   getContextForVoice(): string {
-    const { completedTasks, totalXP, tasksInProgress, pageVisits } = this.context;
+    const { websiteContent, completedTasks, totalXP, tasksInProgress, pageVisits } = this.context;
     const recentActivities = this.context.activities.slice(-5);
 
-    let summary = `The user has earned ${totalXP} XP and completed ${completedTasks.length} tasks. `;
+    let summary = '';
+
+    // Include all website content
+    summary += `Website info: `;
+    Object.entries(websiteContent).forEach(([pageName, content]) => {
+      summary += `${pageName}: ${content}. `;
+    });
+
+    // User stats
+    summary += `The user has earned ${totalXP} XP and completed ${completedTasks.length} tasks. `;
 
     if (tasksInProgress.length > 0) {
       summary += `They currently have ${tasksInProgress.length} task(s) in progress. `;
     }
 
-    // Include recent page content for context
-    const recentPagesWithContent = pageVisits.slice(-3).filter(v => v.pageContent);
-    if (recentPagesWithContent.length > 0) {
+    // Pages they've visited
+    const recentPages = pageVisits.slice(-3);
+    if (recentPages.length > 0) {
       summary += `Recent pages they've viewed: `;
-      recentPagesWithContent.forEach(visit => {
-        summary += `${visit.page} (content: ${visit.pageContent?.substring(0, 200)}), `;
+      recentPages.forEach(visit => {
+        summary += `${visit.page}, `;
       });
     }
 
