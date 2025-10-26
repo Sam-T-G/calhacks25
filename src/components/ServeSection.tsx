@@ -367,6 +367,9 @@ export function ServeSection({
 															? Math.round(opp.xp / opp.totalRequired)
 															: opp.xp
 													}
+													isMultiStep={opp.requiresMultiple}
+													currentProgress={activityProgress.get(opp.id) || 0}
+													totalRequired={opp.totalRequired || 1}
 													onVerified={() =>
 														handleComplete(
 															opp.id,
@@ -522,6 +525,9 @@ export function ServeSection({
 															? Math.round(alert.xp / alert.totalRequired)
 															: alert.xp
 													}
+													isMultiStep={alert.requiresMultiple}
+													currentProgress={activityProgress.get(alert.id) || 0}
+													totalRequired={alert.totalRequired || 1}
 													onVerified={() =>
 														handleComplete(
 															alert.id,
@@ -651,6 +657,9 @@ export function ServeSection({
 															? Math.round(game.xp / game.totalRequired)
 															: game.xp
 													}
+													isMultiStep={game.requiresMultiple}
+													currentProgress={activityProgress.get(game.id) || 0}
+													totalRequired={game.totalRequired || 1}
 													onVerified={() =>
 														handleComplete(
 															game.id,

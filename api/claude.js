@@ -91,7 +91,14 @@ function buildActivityGenerationRequest(params) {
 }
 
 function buildPhotoVerificationRequest(params) {
-	const { photoBase64, taskTitle, taskDescription } = params;
+	const {
+		photoBase64,
+		taskTitle,
+		taskDescription,
+		isMultiStep,
+		currentProgress,
+		totalRequired,
+	} = params;
 
 	// Extract base64 data
 	const base64Data = photoBase64.split(",")[1] || photoBase64;
@@ -104,6 +111,14 @@ function buildPhotoVerificationRequest(params) {
 	} else if (mediaTypePrefix.includes("image/webp")) {
 		mediaType = "image/webp";
 	}
+
+	const verificationText = buildVerificationPrompt(
+		taskTitle,
+		taskDescription,
+		isMultiStep,
+		currentProgress,
+		totalRequired
+	);
 
 	return {
 		model: "claude-3-5-sonnet-20241022",
@@ -122,7 +137,47 @@ function buildPhotoVerificationRequest(params) {
 					},
 					{
 						type: "text",
-						text: `Please analyze this image to verify if it shows completion of the following task:
+						text: verificationText,
+					},
+				],
+			},
+		],
+	};
+}
+
+function buildVerificationPrompt(
+	taskTitle,
+	taskDescription,
+	isMultiStep,
+	currentProgress,
+	totalRequired
+) {
+	if (isMultiStep) {
+		// For multi-step activities, verify the ACTION type, not the quantity
+		return `Please analyze this image to verify if it shows the correct type of action for this incremental task:
+
+Task: ${taskTitle}
+${taskDescription ? `Description: ${taskDescription}` : ""}
+Progress: ${currentProgress}/${totalRequired} completed
+
+IMPORTANT: This is a multi-step activity where the user needs to complete ${totalRequired} instances.
+- You are verifying if this photo shows ONE instance of the correct action (not all ${totalRequired})
+- If the photo shows the correct type of activity, ACCEPT it (verified: true)
+- For example, for "Recycle 50 cans", accept any photo showing recycling activity, even if it's just 1 can
+- For "Collect 20 donations", accept any photo showing a donation item
+- Focus on verifying the ACTION TYPE, not the quantity
+
+Respond in JSON format with:
+{
+  "verified": boolean (true if the image shows the correct type of action for this task),
+  "confidence": number (0-1 scale of how confident you are),
+  "message": string (brief encouraging message about what you see)
+}
+
+Be lenient and encouraging. If the photo shows genuine effort toward the right type of action, verify it!`;
+	} else {
+		// For single-completion activities, verify full completion
+		return `Please analyze this image to verify if it shows completion of the following task:
 
 Task: ${taskTitle}
 ${taskDescription ? `Description: ${taskDescription}` : ""}
@@ -134,12 +189,8 @@ Respond in JSON format with:
   "message": string (brief explanation of what you see and why you verified or rejected it)
 }
 
-Be reasonable but not overly strict. If the image shows genuine effort toward completing the task, you can verify it.`,
-					},
-				],
-			},
-		],
-	};
+Be reasonable but not overly strict. If the image shows genuine effort toward completing the task, you can verify it.`;
+	}
 }
 
 function buildGenerationPrompt(preferences) {

@@ -123,11 +123,21 @@ export class ClaudeService {
 	async verifyPhotoCompletion(
 		photoBase64: string,
 		taskTitle: string,
-		taskDescription?: string
+		taskDescription?: string,
+		isMultiStep: boolean = false,
+		currentProgress: number = 0,
+		totalRequired: number = 1
 	): Promise<{ verified: boolean; confidence: number; message: string }> {
 		// Use API endpoint if in production (Vercel)
 		if (API_ENDPOINT) {
-			return this.verifyViaBackend(photoBase64, taskTitle, taskDescription);
+			return this.verifyViaBackend(
+				photoBase64,
+				taskTitle,
+				taskDescription,
+				isMultiStep,
+				currentProgress,
+				totalRequired
+			);
 		}
 
 		// Development mode: fall back to demo verification
@@ -136,7 +146,9 @@ export class ClaudeService {
 			return {
 				verified: true,
 				confidence: 0.85,
-				message: "Photo verification is in demo mode.",
+				message: isMultiStep
+					? `Progress: ${currentProgress + 1}/${totalRequired} - Keep it up!`
+					: "Photo verification is in demo mode.",
 			};
 		}
 
@@ -197,19 +209,13 @@ export class ClaudeService {
 								},
 								{
 									type: "text",
-									text: `Please analyze this image to verify if it shows completion of the following task:
-
-Task: ${taskTitle}
-${taskDescription ? `Description: ${taskDescription}` : ""}
-
-Respond in JSON format with:
-{
-  "verified": boolean (true if the image clearly shows the task was completed),
-  "confidence": number (0-1 scale of how confident you are),
-  "message": string (brief explanation of what you see and why you verified or rejected it)
-}
-
-Be reasonable but not overly strict. If the image shows genuine effort toward completing the task, you can verify it.`,
+									text: this.buildVerificationPrompt(
+										taskTitle,
+										taskDescription,
+										isMultiStep,
+										currentProgress,
+										totalRequired
+									),
 								},
 							],
 						},
@@ -490,7 +496,10 @@ Generate only the JSON, no additional text.`;
 	private async verifyViaBackend(
 		photoBase64: string,
 		taskTitle: string,
-		taskDescription?: string
+		taskDescription?: string,
+		isMultiStep: boolean = false,
+		currentProgress: number = 0,
+		totalRequired: number = 1
 	): Promise<{ verified: boolean; confidence: number; message: string }> {
 		try {
 			const response = await fetch(API_ENDPOINT!, {
@@ -503,6 +512,9 @@ Generate only the JSON, no additional text.`;
 					photoBase64,
 					taskTitle,
 					taskDescription,
+					isMultiStep,
+					currentProgress,
+					totalRequired,
 				}),
 			});
 
@@ -569,6 +581,54 @@ Generate only the JSON, no additional text.`;
 				message:
 					"Could not verify photo at this time. Please try again in a moment.",
 			};
+		}
+	}
+
+	private buildVerificationPrompt(
+		taskTitle: string,
+		taskDescription: string | undefined,
+		isMultiStep: boolean,
+		currentProgress: number,
+		totalRequired: number
+	): string {
+		if (isMultiStep) {
+			// For multi-step activities, verify the ACTION type, not the quantity
+			return `Please analyze this image to verify if it shows the correct type of action for this incremental task:
+
+Task: ${taskTitle}
+${taskDescription ? `Description: ${taskDescription}` : ""}
+Progress: ${currentProgress}/${totalRequired} completed
+
+IMPORTANT: This is a multi-step activity where the user needs to complete ${totalRequired} instances.
+- You are verifying if this photo shows ONE instance of the correct action (not all ${totalRequired})
+- If the photo shows the correct type of activity, ACCEPT it (verified: true)
+- For example, for "Recycle 50 cans", accept any photo showing recycling activity, even if it's just 1 can
+- For "Collect 20 donations", accept any photo showing a donation item
+- Focus on verifying the ACTION TYPE, not the quantity
+
+Respond in JSON format with:
+{
+  "verified": boolean (true if the image shows the correct type of action for this task),
+  "confidence": number (0-1 scale of how confident you are),
+  "message": string (brief encouraging message about what you see)
+}
+
+Be lenient and encouraging. If the photo shows genuine effort toward the right type of action, verify it!`;
+		} else {
+			// For single-completion activities, verify full completion
+			return `Please analyze this image to verify if it shows completion of the following task:
+
+Task: ${taskTitle}
+${taskDescription ? `Description: ${taskDescription}` : ""}
+
+Respond in JSON format with:
+{
+  "verified": boolean (true if the image clearly shows the task was completed),
+  "confidence": number (0-1 scale of how confident you are),
+  "message": string (brief explanation of what you see and why you verified or rejected it)
+}
+
+Be reasonable but not overly strict. If the image shows genuine effort toward completing the task, you can verify it.`;
 		}
 	}
 

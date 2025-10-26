@@ -32,6 +32,9 @@ interface PhotoVerificationProps {
 	xpReward: number;
 	onVerified: () => void;
 	buttonOnly?: boolean;
+	isMultiStep?: boolean;
+	currentProgress?: number;
+	totalRequired?: number;
 }
 
 export function PhotoVerification({
@@ -40,6 +43,9 @@ export function PhotoVerification({
 	xpReward,
 	onVerified,
 	buttonOnly = false,
+	isMultiStep = false,
+	currentProgress = 0,
+	totalRequired = 1,
 }: PhotoVerificationProps) {
 	const [isOpen, setIsOpen] = useState(false);
 	const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
@@ -147,7 +153,10 @@ export function PhotoVerification({
 			const result = await claudeService.verifyPhotoCompletion(
 				selectedPhoto,
 				taskTitle,
-				taskDescription
+				taskDescription,
+				isMultiStep,
+				currentProgress,
+				totalRequired
 			);
 
 			if (result.verified) {
