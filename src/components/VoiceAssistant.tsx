@@ -26,11 +26,16 @@ export function VoiceAssistant({ isActive, onClose }: VoiceAssistantProps) {
     setError('');
 
     try {
-      // Sync context to backend before starting voice session
-      // This allows the voice agent to access user context
-      await contextService.syncToBackend();
+      // Get user context for the voice agent
+      const userContext = contextService.getContextForVoice();
 
-      const response = await fetch('/api/livekit-token');
+      // Pass context via query params to the token endpoint
+      // The endpoint will embed it in room metadata for the voice agent
+      const params = new URLSearchParams({
+        userContext: userContext,
+      });
+
+      const response = await fetch(`/api/livekit-token?${params}`);
 
       if (!response.ok) {
         throw new Error('Failed to get LiveKit token');

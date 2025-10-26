@@ -1,5 +1,5 @@
 import logging
-import httpx
+import json
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
 from dotenv import load_dotenv
@@ -16,9 +16,6 @@ from livekit.plugins import noise_cancellation, silero
 logger = logging.getLogger("agent")
 
 load_dotenv(".env.local")
-
-# Context API base URL
-CONTEXT_API_URL = "http://localhost:3001/api/context"
 
 
 class Assistant(Agent):
@@ -37,43 +34,46 @@ class Assistant(Agent):
 
         super().__init__(instructions=base_instructions)
 
-async def fetch_user_context(room_name: str) -> str:
-    """Fetch user context from the context API based on room name"""
+async def get_user_context(ctx: JobContext) -> str:
+    """Extract user context from participant metadata"""
     try:
-        # Extract session ID from room name (format: dogood-{timestamp})
-        # In production, you'd get this from room metadata
-        logger.info(f"Attempting to fetch context for room: {room_name}")
+        # Wait for a participant to join (the user)
+        await ctx.wait_for_participant()
 
-        # For now, try to fetch any available context
-        # You could also extract sessionId from room metadata
-        async with httpx.AsyncClient() as client:
-            # Try to get context - in production, pass sessionId properly
-            response = await client.get(f"{CONTEXT_API_URL}?sessionId=latest", timeout=5.0)
+        # Get the first participant (user)
+        participants = list(ctx.room.remote_participants.values())
+        if not participants:
+            logger.warning("No participants found")
+            return ""
 
-            if response.status_code == 200:
-                context_data = response.json()
-                logger.info(f"Fetched context successfully")
+        participant = participants[0]
+        logger.info(f"Got participant: {participant.identity}")
 
-                # Format context for voice agent
-                context_str = f"User has {context_data.get('totalXP', 0)} XP and completed {len(context_data.get('completedTasks', []))} tasks."
+        # Get metadata from participant
+        metadata = participant.metadata
+        if metadata:
+            try:
+                metadata_obj = json.loads(metadata)
+                user_context = metadata_obj.get('userContext', '')
+                if user_context:
+                    logger.info(f"Got user context from metadata: {user_context[:100]}...")
+                    return user_context
+            except json.JSONDecodeError:
+                logger.warning(f"Failed to parse participant metadata: {metadata}")
 
-                # Add recent activities
-                activities = context_data.get('activities', [])[-5:]
-                if activities:
-                    context_str += "\nRecent activities: " + ", ".join([a['description'] for a in activities])
-
-                return context_str
-            else:
-                logger.warning(f"Context API returned {response.status_code}")
-                return ""
+        logger.info("No user context found in participant metadata")
+        return ""
     except Exception as e:
-        logger.warning(f"Failed to fetch context: {e}")
+        logger.warning(f"Failed to get user context: {e}")
         return ""
 
 
 async def entrypoint(ctx: JobContext):
-    # Fetch user context
-    user_context = await fetch_user_context(ctx.room.name)
+    # Connect to the room first
+    await ctx.connect()
+
+    # Get user context from participant metadata
+    user_context = await get_user_context(ctx)
 
     vad = silero.VAD.load()
     session = AgentSession(

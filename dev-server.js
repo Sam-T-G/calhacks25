@@ -35,9 +35,16 @@ app.get('/api/livekit-token', async (req, res) => {
     const roomName = req.query.roomName || `dogood-${Date.now()}`;
     const participantName = req.query.participantName || `user-${Math.floor(Math.random() * 10000)}`;
 
+    // Get user context from query params
+    const userContext = req.query.userContext || '';
+
     const at = new AccessToken(apiKey, apiSecret, {
       identity: participantName,
       ttl: '10m',
+      // Store user context in token metadata for voice agent access
+      metadata: JSON.stringify({
+        userContext: userContext,
+      }),
     });
 
     at.addGrant({
