@@ -14,6 +14,7 @@ export interface CommunityOpportunity {
 	progressDescription?: string; // e.g., "cans recycled", "meals served"
 	volunteersNeeded?: number; // Number of volunteers still needed
 	isVolunteerOpportunity?: boolean; // If true, this is a volunteer opportunity
+	description?: string; // Detailed context about the activity
 }
 
 export interface CrisisAlert {
@@ -28,6 +29,7 @@ export interface CrisisAlert {
 	requiresMultiple?: boolean;
 	totalRequired?: number;
 	progressDescription?: string;
+	description?: string; // Context about this urgent local situation
 }
 
 export interface MiniGame {

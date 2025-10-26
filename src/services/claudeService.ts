@@ -1,9 +1,8 @@
 import { ServeActivities, UserPreferences } from "../types/serve";
 import { contextService } from "./contextService";
 
-// Use backend proxy in production, direct API in development (will fail with CORS, falls back to mock)
-const API_ENDPOINT =
-	(import.meta as any).env?.MODE === "production" ? "/api/claude" : null;
+// Always use backend proxy for Claude API calls
+const API_ENDPOINT = "/api/claude";
 const CLAUDE_API_KEY = (import.meta as any).env?.VITE_ANTHROPIC_API_KEY;
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 
@@ -18,7 +17,9 @@ export class ClaudeService {
 	constructor() {
 		this.apiKey = CLAUDE_API_KEY || "";
 		if (!this.apiKey) {
-			console.warn("Claude API key not found. Using mock data.");
+			console.info(
+				"Claude API key not found in frontend. Using backend proxy or mock data."
+			);
 		}
 	}
 
@@ -28,17 +29,13 @@ export class ClaudeService {
 	async generateServeActivities(
 		preferences?: UserPreferences
 	): Promise<ServeActivities> {
-		// Use API endpoint if in production (Vercel), otherwise fall back to mock
-		if (API_ENDPOINT) {
-			return this.generateViaBackend(preferences);
-		}
+		// Always use backend proxy
+		return this.generateViaBackend(preferences);
+	}
 
-		// Development mode: try direct API (will fail CORS), then fall back to mock
-		if (!this.apiKey) {
-			console.info("No API key configured. Using mock data.");
-			return this.getMockActivities();
-		}
-
+	private async _generateViaDirectAPI(
+		preferences?: UserPreferences
+	): Promise<ServeActivities> {
 		const prompt = this.buildGenerationPrompt(preferences);
 
 		try {
@@ -129,30 +126,25 @@ export class ClaudeService {
 		currentProgress: number = 0,
 		totalRequired: number = 1
 	): Promise<{ verified: boolean; confidence: number; message: string }> {
-		// Use API endpoint if in production (Vercel)
-		if (API_ENDPOINT) {
-			return this.verifyViaBackend(
-				photoBase64,
-				taskTitle,
-				taskDescription,
-				isMultiStep,
-				currentProgress,
-				totalRequired
-			);
-		}
+		// Always use backend proxy
+		return this.verifyViaBackend(
+			photoBase64,
+			taskTitle,
+			taskDescription,
+			isMultiStep,
+			currentProgress,
+			totalRequired
+		);
+	}
 
-		// Development mode: fall back to demo verification
-		if (!this.apiKey) {
-			console.info("No API key configured. Using demo verification.");
-			return {
-				verified: true,
-				confidence: 0.85,
-				message: isMultiStep
-					? `Progress: ${currentProgress + 1}/${totalRequired} - Keep it up!`
-					: "Photo verification is in demo mode.",
-			};
-		}
-
+	private async _verifyViaDirectAPI(
+		photoBase64: string,
+		taskTitle: string,
+		taskDescription?: string,
+		isMultiStep: boolean = false,
+		currentProgress: number = 0,
+		totalRequired: number = 1
+	): Promise<{ verified: boolean; confidence: number; message: string }> {
 		try {
 			// Extract the base64 data and detect media type
 			const [mediaTypePrefix, base64Data] = photoBase64.includes(",")
@@ -339,7 +331,7 @@ export class ClaudeService {
 		}
 
 		// Add context section
-		const contextSection = userContext ? `\n\n${userContext}\n` : '';
+		const contextSection = userContext ? `\n\n${userContext}\n` : "";
 
 		return `${basePrompt}${
 			preferencesText ||

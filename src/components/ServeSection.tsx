@@ -240,20 +240,21 @@ export function ServeSection({
 
 					<div className="flex-1 text-center">
 						<h1
-							className="mb-0"
 							style={{
 								fontFamily: "Cooper Black, Cooper Std, serif",
 								fontWeight: 900,
 								fontSize: "28px",
 								color: "#405169",
+								marginBottom: "0px",
 							}}>
 							Serve
 						</h1>
 						<p
-							className="text-xs opacity-70 mt-0"
+							className="text-xs opacity-70"
 							style={{
 								fontFamily: "Cooper Black, Cooper Std, serif",
 								color: "#405169",
+								marginTop: "2px",
 							}}>
 							Make a positive impact
 						</p>
@@ -311,9 +312,11 @@ export function ServeSection({
 			{/* Content with top padding for fixed header */}
 			<div
 				className="relative z-10 max-w-4xl mx-auto px-6 md:px-8 pb-6"
-				style={{ paddingTop: "140px" }}>
+				style={{ paddingTop: "110px" }}>
 				{isLoading ? (
-					<div className="flex items-center justify-center py-12">
+					<div
+						className="flex items-center justify-center"
+						style={{ height: "calc(100vh - 110px)", marginTop: "-110px" }}>
 						<div className="text-center">
 							<RefreshCw
 								className="w-8 h-8 animate-spin mx-auto mb-2"
@@ -390,6 +393,16 @@ export function ServeSection({
 													}}>
 													{opp.title}
 												</h3>
+												{opp.description && (
+													<p
+														className="mb-2 text-sm opacity-80"
+														style={{
+															fontFamily: "Cooper Black, Cooper Std, serif",
+															color: "#405169",
+														}}>
+														{opp.description}
+													</p>
+												)}
 												<div className="flex flex-col gap-2 mb-3 text-xs">
 													<div
 														className="flex items-center gap-1 opacity-70"
@@ -606,6 +619,16 @@ export function ServeSection({
 													}}>
 													{alert.location}
 												</p>
+												{alert.description && (
+													<p
+														className="mb-2 text-sm opacity-70"
+														style={{
+															fontFamily: "Cooper Black, Cooper Std, serif",
+															color: "#405169",
+														}}>
+														{alert.description}
+													</p>
+												)}
 												<div
 													className="flex items-center gap-1 mb-3 text-xs opacity-70"
 													style={{ color: "#405169" }}>
@@ -882,6 +905,41 @@ export function ServeSection({
 						</div>
 					</div>
 				)}
+
+				{/* Refresh Button at Bottom of Content */}
+				<div className="flex justify-center py-6 pb-12 mt-12">
+					{isRegenerating && !isLoading ? (
+						<div
+							className="w-10 h-10 rounded-full"
+							style={{
+								borderTop: "4px solid transparent",
+								borderRight: "4px solid #405169",
+								borderBottom: "4px solid transparent",
+								borderLeft: "4px solid #405169",
+								animation: "spin 0.8s linear infinite",
+							}}></div>
+					) : !isLoading ? (
+						<Button
+							variant="ghost"
+							onClick={handleRegenerate}
+							className="hover:bg-white/30 transition-all rounded-full px-6 py-2"
+							style={{
+								color: "#405169",
+								fontFamily: "Cooper Black, Cooper Std, serif",
+								fontWeight: 700,
+								fontSize: "16px",
+							}}>
+							<RefreshCw className="w-5 h-5 mr-2" />
+							Refresh Activities
+						</Button>
+					) : null}
+				</div>
+				<style>{`
+					@keyframes spin {
+						0% { transform: rotate(0deg); }
+						100% { transform: rotate(360deg); }
+					}
+				`}</style>
 			</div>
 		</div>
 	);

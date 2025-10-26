@@ -4,20 +4,111 @@ import {
 	useVoiceAssistant,
 	BarVisualizer,
 	RoomAudioRenderer,
+	useRoomContext,
 } from "@livekit/components-react";
+import { RoomEvent } from "livekit-client";
 import "@livekit/components-styles";
 import { contextService } from "../services/contextService";
+import { toast } from "sonner";
+import type { Section } from "../App";
 
 interface VoiceAssistantProps {
 	isActive: boolean;
 	onClose: () => void;
+	onNavigate?: (section: Section) => void;
+	onExecuteAction?: (action: any) => void;
 }
 
-export function VoiceAssistant({ isActive, onClose }: VoiceAssistantProps) {
+export function VoiceAssistant({
+	isActive,
+	onClose,
+	onNavigate,
+	onExecuteAction,
+}: VoiceAssistantProps) {
 	const [token, setToken] = useState<string>("");
 	const [wsUrl, setWsUrl] = useState<string>("");
 	const [isConnecting, setIsConnecting] = useState(false);
 	const [error, setError] = useState<string>("");
+
+	// Handle Claude orchestration commands from voice agent
+	const handleClaudeCommand = useCallback(
+		(payload: Uint8Array | string) => {
+			try {
+				console.log(
+					"[VoiceAssistant] handleClaudeCommand called with:",
+					typeof payload,
+					payload
+				);
+
+				// Handle both Uint8Array and string payloads
+				let jsonStr: string;
+				if (typeof payload === "string") {
+					jsonStr = payload;
+				} else {
+					jsonStr = new TextDecoder().decode(payload);
+				}
+
+				console.log("[VoiceAssistant] Decoded JSON string:", jsonStr);
+				const data = JSON.parse(jsonStr);
+				console.log("[VoiceAssistant] Parsed command data:", data);
+
+				// Log orchestration event
+				contextService.logOrchestration(data.intent || "unknown", data);
+
+				// Execute navigation FIRST
+				if (data.navigation && data.navigation.page) {
+					const page = data.navigation.page as Section;
+					console.log("[VoiceAssistant] ⚡ NAVIGATING to:", page);
+					if (onNavigate) {
+						onNavigate(page);
+					} else {
+						console.error("[VoiceAssistant] onNavigate is null!");
+					}
+				} else {
+					console.log(
+						"[VoiceAssistant] No navigation in command:",
+						data.navigation
+					);
+				}
+
+				// Execute actions
+				if (data.actions && onExecuteAction) {
+					data.actions.forEach((action: any) => {
+						console.log("[VoiceAssistant] Executing action:", action);
+						onExecuteAction(action);
+					});
+				}
+
+				// Apply UI updates
+				if (data.ui_updates) {
+					if (data.ui_updates.show_notification) {
+						const notif = data.ui_updates.show_notification;
+						const toastType = notif.type || "info";
+						if (toastType === "success") {
+							toast.success(notif.message);
+						} else if (toastType === "error") {
+							toast.error(notif.message);
+						} else {
+							toast.info(notif.message);
+						}
+					}
+				}
+
+				// Update context/preferences
+				if (data.context_updates) {
+					console.log(
+						"[VoiceAssistant] Updating preferences:",
+						data.context_updates
+					);
+					contextService.updatePreferences(data.context_updates);
+				}
+			} catch (err) {
+				console.error("[VoiceAssistant] Failed to parse Claude command:", err);
+				console.error("[VoiceAssistant] Error details:", err);
+			}
+		},
+		[onNavigate, onExecuteAction]
+	);
 
 	// Fetch LiveKit token when component becomes active
 	useEffect(() => {
@@ -155,24 +246,28 @@ export function VoiceAssistant({ isActive, onClose }: VoiceAssistantProps) {
 				className="fixed inset-0 z-50 flex items-center justify-center"
 				style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
 				<div
-					className="rounded-3xl p-8 shadow-2xl"
-					style={{ backgroundColor: "#405169", minWidth: "400px" }}>
+					className="rounded-2xl p-4 shadow-2xl"
+					style={{
+						backgroundColor: "#405169",
+						minWidth: "320px",
+						maxWidth: "400px",
+					}}>
 					{/* Vintage Paper Texture Overlay */}
 					<div
-						className="absolute inset-0 opacity-[0.1] pointer-events-none rounded-3xl"
+						className="absolute inset-0 opacity-[0.1] pointer-events-none rounded-2xl"
 						style={{
 							backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' /%3E%3C/svg%3E")`,
 							mixBlendMode: "multiply",
 						}}
 					/>
 
-					<div className="relative flex flex-col items-center gap-6">
+					<div className="relative flex flex-col items-center gap-2">
 						<h3
 							className="text-white text-center"
 							style={{
 								fontFamily: "Cooper Black, Cooper Std, serif",
 								fontWeight: 900,
-								fontSize: "20px",
+								fontSize: "16px",
 							}}>
 							DoGood Companion
 						</h3>
@@ -184,7 +279,10 @@ export function VoiceAssistant({ isActive, onClose }: VoiceAssistantProps) {
 							audio={true}
 							video={false}
 							onDisconnected={handleDisconnect}>
-							<VoiceAssistantContent onEndConvo={handleDisconnect} />
+							<VoiceAssistantContent
+								onEndConvo={handleDisconnect}
+								onClaudeCommand={handleClaudeCommand}
+							/>
 						</LiveKitRoom>
 					</div>
 				</div>
@@ -193,37 +291,91 @@ export function VoiceAssistant({ isActive, onClose }: VoiceAssistantProps) {
 	);
 }
 
-function VoiceAssistantContent({ onEndConvo }: { onEndConvo: () => void }) {
+function VoiceAssistantContent({
+	onEndConvo,
+	onClaudeCommand,
+}: {
+	onEndConvo: () => void;
+	onClaudeCommand: (payload: Uint8Array) => void;
+}) {
 	const { state, audioTrack } = useVoiceAssistant();
+	const room = useRoomContext();
+
+	// Listen for data messages from voice agent - check both data channel and room events
+	useEffect(() => {
+		if (!room) {
+			console.log("[VoiceAssistant] No room available yet");
+			return;
+		}
+
+		console.log("[VoiceAssistant] Setting up listeners");
+
+		const handleData = (
+			payload: Uint8Array,
+			participant?: any,
+			kind?: number
+		) => {
+			console.log("[VoiceAssistant] 📨 Data channel received!", {
+				payloadLength: payload.length,
+				payloadPreview: Array.from(payload.slice(0, 20)),
+				participant: participant?.identity,
+				kind,
+			});
+			onClaudeCommand(payload);
+		};
+
+		room.on(RoomEvent.DataReceived, handleData);
+
+		// Listen for all room events to debug
+		room.on(RoomEvent.ParticipantConnected, () => {
+			console.log("[VoiceAssistant] ✅ Participant connected");
+		});
+		room.on(RoomEvent.ConnectionStateChanged, () => {
+			console.log("[VoiceAssistant] 🔄 Connection state:", room.state);
+		});
+
+		// Log current room state
+		console.log("[VoiceAssistant] Room state on mount:", room.state);
+		console.log(
+			"[VoiceAssistant] Remote participants:",
+			room.remoteParticipants.size
+		);
+		console.log(
+			"[VoiceAssistant] Local participant:",
+			room.localParticipant?.identity
+		);
+		console.log("[VoiceAssistant] 📡 Listeners registered");
+
+		return () => {
+			console.log("[VoiceAssistant] Cleaning up listeners");
+			room.off(RoomEvent.DataReceived, handleData);
+		};
+	}, [room, onClaudeCommand]);
 
 	return (
-		<div className="flex flex-col items-center gap-6 w-full">
+		<div className="flex flex-col items-center gap-2 w-full">
 			{/* Audio Renderer - handles playback */}
 			<RoomAudioRenderer />
 
-			{/* Audio Visualizer */}
-			<div className="w-full flex justify-center" style={{ height: "80px" }}>
+			{/* Compact Audio Visualizer */}
+			<div className="w-full flex justify-center" style={{ height: "32px" }}>
 				{audioTrack && (
 					<BarVisualizer
 						state={state}
-						barCount={7}
+						barCount={5}
 						trackRef={audioTrack}
 						className="voice-assistant-visualizer"
-						options={{
-							barColor: "#E8DC93",
-							minHeight: 16,
-						}}
 					/>
 				)}
 				{!audioTrack && (
-					<div className="flex items-center gap-2">
-						{[...Array(7)].map((_, i) => (
+					<div className="flex items-center gap-1.5">
+						{[...Array(5)].map((_, i) => (
 							<div
 								key={i}
-								className="w-2 rounded-full"
+								className="w-1.5 rounded-full"
 								style={{
 									backgroundColor: "#E8DC93",
-									height: state === "listening" ? "32px" : "16px",
+									height: state === "listening" ? "24px" : "12px",
 									animation:
 										state === "listening"
 											? `wave 0.6s ease-in-out infinite ${i * 0.1}s`
@@ -236,50 +388,43 @@ function VoiceAssistantContent({ onEndConvo }: { onEndConvo: () => void }) {
 				)}
 			</div>
 
-			{/* State Display */}
+			{/* Compact State Display */}
 			<p
 				className="text-white text-center"
 				style={{
 					fontFamily: "Cooper Black, Cooper Std, serif",
 					fontWeight: 700,
-					fontSize: "16px",
+					fontSize: "12px",
 				}}>
 				{state === "listening" && "Listening..."}
 				{state === "thinking" && "Thinking..."}
 				{state === "speaking" && "Speaking..."}
-				{!state || state === "initializing" ? "Ready to help!" : ""}
+				{!state || state === "initializing" ? "Ready!" : ""}
 			</p>
 
-			{/* Powered by LiveKit */}
-			<p
-				className="text-white/80 text-center text-sm"
-				style={{ fontFamily: "Cooper Black, Cooper Std, serif" }}>
-				Powered by LiveKit
-			</p>
-
-			{/* End Convo Button */}
+			{/* Compact End Button */}
 			<button
 				onClick={onEndConvo}
-				className="rounded-full px-6 py-2 flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all active:scale-95"
+				className="rounded-full px-4 py-1 flex items-center justify-center gap-1 shadow-md hover:shadow-lg transition-all active:scale-95"
 				style={{
 					backgroundColor: "#9D5C45",
 					fontFamily: "Cooper Black, Cooper Std, serif",
 					fontWeight: 700,
 					color: "white",
-					fontSize: "14px",
-					letterSpacing: "0.3px",
+					fontSize: "12px",
+					letterSpacing: "0.2px",
 				}}>
-				End Conversation
+				End
 			</button>
 
 			<style>{`
         @keyframes wave {
-          0%, 100% { height: 16px; }
-          50% { height: 48px; }
+          0%, 100% { height: 12px; }
+          50% { height: 24px; }
         }
         .voice-assistant-visualizer {
           width: 100%;
-          max-width: 300px;
+          max-width: 200px;
         }
       `}</style>
 		</div>

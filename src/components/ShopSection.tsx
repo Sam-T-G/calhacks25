@@ -1,10 +1,9 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { ArrowLeft, Heart, Sparkles, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "./ui/badge";
-import { ImageWithFallback } from "./figma/ImageWithFallback";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -167,20 +166,21 @@ export function ShopSection({ xpPoints, onBack, onSpendXP }: ShopSectionProps) {
 
 					<div className="flex-1 text-center">
 						<h1
-							className="mb-0"
 							style={{
 								fontFamily: "Cooper Black, Cooper Std, serif",
 								fontWeight: 900,
 								fontSize: "28px",
 								color: "#405169",
+								marginBottom: "2px",
 							}}>
 							Shop
 						</h1>
 						<p
-							className="text-xs opacity-70 mt-0"
+							className="text-xs opacity-70"
 							style={{
 								fontFamily: "Cooper Black, Cooper Std, serif",
 								color: "#405169",
+								marginTop: "0",
 							}}>
 							Redeem your XP for rewards
 						</p>
@@ -238,7 +238,7 @@ export function ShopSection({ xpPoints, onBack, onSpendXP }: ShopSectionProps) {
 			{/* Content with top padding for fixed header */}
 			<div
 				className="relative z-10 max-w-4xl mx-auto px-6 md:px-8 pb-6"
-				style={{ paddingTop: "140px" }}>
+				style={{ paddingTop: "110px" }}>
 				{/* Stats Card */}
 				<div className="grid grid-cols-2 gap-3 mb-6">
 					<Card

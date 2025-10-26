@@ -130,12 +130,12 @@ export function UserStats({ xpPoints, onBack }: UserStatsProps) {
 
 					<div className="flex-1 text-center">
 						<h1
-							className="mb-0"
 							style={{
 								fontFamily: "Cooper Black, Cooper Std, serif",
 								fontWeight: 900,
 								fontSize: "28px",
 								color: "#405169",
+								marginBottom: "0",
 							}}>
 							Your Progress
 						</h1>
@@ -193,7 +193,7 @@ export function UserStats({ xpPoints, onBack }: UserStatsProps) {
 			{/* Content with top padding for fixed header */}
 			<div
 				className="relative z-10 max-w-4xl mx-auto px-6 md:px-8 pb-6"
-				style={{ paddingTop: "140px" }}>
+				style={{ paddingTop: "110px" }}>
 				{/* XP Stats Cards */}
 				<div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
 					<Card
