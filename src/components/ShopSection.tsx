@@ -29,6 +29,7 @@ export function ShopSection({ xpPoints, onBack, onSpendXP }: ShopSectionProps) {
 	>(null);
 	const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 	const [donations, setDonations] = useState<Record<string, number>>({});
+	const [totalDonatedAmount, setTotalDonatedAmount] = useState<number>(0);
 
 	const charities = [
 		{
@@ -110,6 +111,13 @@ export function ShopSection({ xpPoints, onBack, onSpendXP }: ShopSectionProps) {
 				...prev,
 				[selectedCharity.id]: (prev[selectedCharity.id] || 0) + 1,
 			}));
+
+			// Extract dollar amount from impact string (e.g., "$5 donation" -> 5)
+			const dollarAmount = parseFloat(
+				selectedCharity.impact.replace(/[^0-9.]/g, "")
+			);
+			setTotalDonatedAmount((prev) => prev + dollarAmount);
+
 			toast.success("Thank you for your donation!", {
 				description: `${selectedCharity.impact} sent to ${selectedCharity.name}`,
 			});
@@ -121,11 +129,6 @@ export function ShopSection({ xpPoints, onBack, onSpendXP }: ShopSectionProps) {
 		setShowConfirmDialog(false);
 		setSelectedCharity(null);
 	};
-
-	const totalDonated = Object.values(donations).reduce(
-		(sum, count) => sum + count,
-		0
-	);
 
 	return (
 		<div
@@ -215,7 +218,7 @@ export function ShopSection({ xpPoints, onBack, onSpendXP }: ShopSectionProps) {
 								<p
 									className="opacity-90 mb-1 text-xs"
 									style={{ fontFamily: "Cooper Black, Cooper Std, serif" }}>
-									Donations Made
+									Donated
 								</p>
 								<div
 									className="text-2xl"
@@ -223,7 +226,7 @@ export function ShopSection({ xpPoints, onBack, onSpendXP }: ShopSectionProps) {
 										fontFamily: "Cooper Black, Cooper Std, serif",
 										fontWeight: 900,
 									}}>
-									{totalDonated}
+									${totalDonatedAmount.toFixed(2)}
 								</div>
 							</div>
 						</div>

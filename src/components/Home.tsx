@@ -71,9 +71,10 @@ export function Home({ xpPoints, onNavigate, onVoiceAssistant }: HomeProps) {
 					/>
 				</div>
 
-				{/* XP Counter */}
-				<div
-					className="w-full rounded-full px-5 py-2 mb-6 shadow-sm"
+				{/* XP Counter - Clickable */}
+				<button
+					onClick={() => onNavigate("stats")}
+					className="w-full rounded-full px-5 py-2 mb-6 shadow-sm hover:shadow-md transition-all active:scale-95"
 					style={{
 						backgroundColor: "#405169",
 						boxShadow:
@@ -99,7 +100,7 @@ export function Home({ xpPoints, onNavigate, onVoiceAssistant }: HomeProps) {
 							{xpPoints.toLocaleString()}
 						</span>
 					</div>
-				</div>
+				</button>
 
 				{/* Navigation Buttons */}
 				<div className="flex flex-col gap-3 w-full mb-10">

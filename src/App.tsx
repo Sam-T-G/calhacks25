@@ -4,6 +4,7 @@ import { ServeSection } from "./components/ServeSection";
 import { ProductivitySection } from "./components/ProductivitySection";
 import { SelfImproveSection } from "./components/SelfImproveSection";
 import { ShopSection } from "./components/ShopSection";
+import { UserStats } from "./components/UserStats";
 import { VoiceAssistant } from "./components/VoiceAssistant";
 import { Toaster } from "./components/ui/sonner";
 import { userPreferences } from "./config/userPreferences";
@@ -14,7 +15,8 @@ export type Section =
 	| "serve"
 	| "productivity"
 	| "self-improve"
-	| "shop";
+	| "shop"
+	| "stats";
 
 export default function App() {
 	const [currentSection, setCurrentSection] = useState<Section>("home");
@@ -23,14 +25,18 @@ export default function App() {
 
 	// Track page navigation
 	useEffect(() => {
-		const pageName = currentSection.charAt(0).toUpperCase() + currentSection.slice(1);
+		const pageName =
+			currentSection.charAt(0).toUpperCase() + currentSection.slice(1);
 		contextService.trackPageVisit(pageName);
 	}, [currentSection]);
 
 	// Track voice assistant sessions
 	useEffect(() => {
 		if (isVoiceAssistantActive) {
-			contextService.logActivity('voice_session_started', 'Started DoGood Companion voice session');
+			contextService.logActivity(
+				"voice_session_started",
+				"Started DoGood Companion voice session"
+			);
 		}
 	}, [isVoiceAssistantActive]);
 
@@ -86,6 +92,13 @@ export default function App() {
 						xpPoints={xpPoints}
 						onBack={() => setCurrentSection("home")}
 						onSpendXP={spendXP}
+					/>
+				);
+			case "stats":
+				return (
+					<UserStats
+						xpPoints={xpPoints}
+						onBack={() => setCurrentSection("home")}
 					/>
 				);
 			default:
