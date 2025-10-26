@@ -1,0 +1,677 @@
+import React, { useState, useEffect, useCallback } from "react";
+import { Card } from "./ui/card";
+import { Button } from "./ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { Progress } from "./ui/progress";
+import {
+	ArrowLeft,
+	MapPin,
+	AlertCircle,
+	Clock,
+	Calendar,
+	RefreshCw,
+} from "lucide-react";
+import { toast } from "sonner";
+import { Badge } from "./ui/badge";
+import { PhotoVerification } from "./PhotoVerification";
+import { claudeService } from "../services/claudeService";
+import { ServeActivities, UserPreferences } from "../types/serve";
+
+interface ServeSectionProps {
+	onBack: () => void;
+	onEarnXP: (points: number) => void;
+	userPreferences?: UserPreferences;
+}
+
+export function ServeSection({
+	onBack,
+	onEarnXP,
+	userPreferences,
+}: ServeSectionProps) {
+	const [completedActivities, setCompletedActivities] = useState<Set<string>>(
+		new Set()
+	);
+	const [activityProgress, setActivityProgress] = useState<Map<string, number>>(
+		new Map()
+	);
+	const [activities, setActivities] = useState<ServeActivities | null>(null);
+	const [isLoading, setIsLoading] = useState(true);
+	const [isRegenerating, setIsRegenerating] = useState(false);
+
+	// Memoize loadActivities to prevent unnecessary re-renders
+	const loadActivities = useCallback(async () => {
+		setIsLoading(true);
+		try {
+			const generatedActivities = await claudeService.generateServeActivities(
+				userPreferences
+			);
+			setActivities(generatedActivities);
+		} catch (error) {
+			console.error("Error loading activities:", error);
+			toast.error("Failed to load activities", {
+				description: "Please try again.",
+			});
+		} finally {
+			setIsLoading(false);
+		}
+	}, [userPreferences]);
+
+	// Load activities on mount
+	useEffect(() => {
+		loadActivities();
+	}, [loadActivities]);
+
+	const handleRegenerate = async () => {
+		setIsRegenerating(true);
+		try {
+			const generatedActivities = await claudeService.generateServeActivities(
+				userPreferences
+			);
+			setActivities(generatedActivities);
+			toast.success("Activities refreshed!", {
+				description: "New opportunities generated.",
+			});
+		} catch (error) {
+			console.error("Error regenerating activities:", error);
+			toast.error("Failed to refresh activities", {
+				description: "Please try again.",
+			});
+		} finally {
+			setIsRegenerating(false);
+		}
+	};
+
+	const handleComplete = (
+		id: string,
+		scaledXP: number,
+		requiresMultiple?: boolean,
+		totalRequired?: number
+	) => {
+		if (requiresMultiple && totalRequired) {
+			// Update progress
+			const currentProgress = activityProgress.get(id) || 0;
+			const newProgress = currentProgress + 1;
+
+			setActivityProgress(new Map(activityProgress.set(id, newProgress)));
+
+			// Award scaled XP for this completion
+			onEarnXP(scaledXP);
+
+			// Check if fully completed
+			if (newProgress >= totalRequired) {
+				setCompletedActivities(new Set(completedActivities).add(id));
+				toast.success("Activity Fully Completed!", {
+					description: `All ${totalRequired} completed! Amazing work!`,
+				});
+			}
+			// Don't show toast here - the success dialog handles it
+		} else {
+			// Single completion - award full XP
+			setCompletedActivities(new Set(completedActivities).add(id));
+			onEarnXP(scaledXP);
+		}
+	};
+
+	// Filter out completed items
+	const communityOpportunities =
+		activities?.communityOpportunities.filter(
+			(opp) => !completedActivities.has(opp.id)
+		) || [];
+	const crisisAlerts =
+		activities?.crisisAlerts.filter(
+			(alert) => !completedActivities.has(alert.id)
+		) || [];
+	const miniGames =
+		activities?.miniGames.filter((game) => !completedActivities.has(game.id)) ||
+		[];
+
+	return (
+		<div
+			className="min-h-screen p-6 md:p-8 relative"
+			style={{ backgroundColor: "#E8DC93" }}>
+			{/* Vintage Paper Texture Overlay */}
+			<div
+				className="absolute inset-0 opacity-[0.15] pointer-events-none"
+				style={{
+					backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' /%3E%3C/svg%3E")`,
+					mixBlendMode: "multiply",
+				}}
+			/>
+
+			<div className="relative z-10 max-w-4xl mx-auto">
+				<Button
+					variant="ghost"
+					onClick={onBack}
+					className="mb-4 -ml-2 hover:bg-white/20"
+					style={{
+						color: "#405169",
+						fontFamily: "Cooper Black, Cooper Std, serif",
+						fontWeight: 700,
+					}}>
+					<ArrowLeft className="w-4 h-4 mr-2" />
+					Back
+				</Button>
+
+				<div className="mb-6 flex justify-between items-start">
+					<div>
+						<h1
+							className="mb-1"
+							style={{
+								fontFamily: "Cooper Black, Cooper Std, serif",
+								fontWeight: 900,
+								fontSize: "32px",
+								color: "#405169",
+							}}>
+							Serve
+						</h1>
+						<p
+							className="text-sm opacity-70"
+							style={{
+								fontFamily: "Cooper Black, Cooper Std, serif",
+								color: "#405169",
+							}}>
+							Make a positive impact
+						</p>
+					</div>
+					<Button
+						onClick={handleRegenerate}
+						disabled={isRegenerating || isLoading}
+						size="sm"
+						className="border-0"
+						style={{
+							backgroundColor: "#405169",
+							fontFamily: "Cooper Black, Cooper Std, serif",
+							fontWeight: 700,
+						}}>
+						<RefreshCw
+							className={`w-4 h-4 mr-2 ${isRegenerating ? "animate-spin" : ""}`}
+						/>
+						Refresh
+					</Button>
+				</div>
+
+				{isLoading ? (
+					<div className="flex items-center justify-center py-12">
+						<div className="text-center">
+							<RefreshCw
+								className="w-8 h-8 animate-spin mx-auto mb-2"
+								style={{ color: "#405169" }}
+							/>
+							<p
+								style={{
+									fontFamily: "Cooper Black, Cooper Std, serif",
+									color: "#405169",
+								}}>
+								Loading activities...
+							</p>
+						</div>
+					</div>
+				) : (
+					<Tabs defaultValue="opportunities" className="w-full">
+						<TabsList
+							className="grid w-full grid-cols-3 mb-6"
+							style={{ backgroundColor: "#D4C883" }}>
+							<TabsTrigger
+								value="opportunities"
+								style={{
+									fontFamily: "Cooper Black, Cooper Std, serif",
+									fontWeight: 700,
+								}}>
+								Opportunities
+							</TabsTrigger>
+							<TabsTrigger
+								value="crisis"
+								style={{
+									fontFamily: "Cooper Black, Cooper Std, serif",
+									fontWeight: 700,
+								}}>
+								Alerts
+							</TabsTrigger>
+							<TabsTrigger
+								value="games"
+								style={{
+									fontFamily: "Cooper Black, Cooper Std, serif",
+									fontWeight: 700,
+								}}>
+								Games
+							</TabsTrigger>
+						</TabsList>
+
+						<TabsContent value="opportunities" className="space-y-3">
+							{communityOpportunities.length === 0 ? (
+								<Card
+									className="p-8 border-0 shadow-md text-center"
+									style={{ backgroundColor: "#FAF7EB" }}>
+									<p
+										style={{
+											fontFamily: "Cooper Black, Cooper Std, serif",
+											color: "#405169",
+										}}>
+										All opportunities completed! Click refresh for new ones.
+									</p>
+								</Card>
+							) : (
+								communityOpportunities.map((opp) => (
+									<Card
+										key={opp.id}
+										className="p-4 border-0 shadow-md"
+										style={{ backgroundColor: "#FAF7EB" }}>
+										<div className="flex flex-col gap-3">
+											<div className="flex-1">
+												<h3
+													className="mb-2"
+													style={{
+														fontFamily: "Cooper Black, Cooper Std, serif",
+														fontWeight: 900,
+														fontSize: "18px",
+														color: "#405169",
+													}}>
+													{opp.title}
+												</h3>
+												<div className="flex flex-col gap-2 mb-3 text-xs">
+													<div
+														className="flex items-center gap-1 opacity-70"
+														style={{ color: "#405169" }}>
+														<MapPin className="w-3 h-3 flex-shrink-0" />
+														<span
+															className="truncate"
+															style={{
+																fontFamily: "Cooper Black, Cooper Std, serif",
+															}}>
+															{opp.location}
+														</span>
+													</div>
+													<div
+														className="flex items-center gap-1 opacity-70"
+														style={{ color: "#405169" }}>
+														<Calendar className="w-3 h-3 flex-shrink-0" />
+														<span
+															style={{
+																fontFamily: "Cooper Black, Cooper Std, serif",
+															}}>
+															{opp.date} • {opp.time}
+														</span>
+													</div>
+													<div
+														className="flex items-center gap-1 opacity-70"
+														style={{ color: "#405169" }}>
+														<Clock className="w-3 h-3 flex-shrink-0" />
+														<span
+															style={{
+																fontFamily: "Cooper Black, Cooper Std, serif",
+															}}>
+															{opp.duration}
+														</span>
+													</div>
+												</div>
+												<Badge
+													variant="secondary"
+													className="text-xs border-0"
+													style={{
+														backgroundColor: "#D4C883",
+														color: "#405169",
+														fontFamily: "Cooper Black, Cooper Std, serif",
+													}}>
+													{opp.distance} away
+												</Badge>
+											</div>
+
+											{/* Progress Bar for Multi-Step Activities */}
+											{opp.requiresMultiple && opp.totalRequired && (
+												<div className="space-y-1">
+													<div className="flex justify-between text-xs">
+														<span
+															style={{
+																fontFamily: "Cooper Black, Cooper Std, serif",
+																color: "#405169",
+															}}>
+															{opp.progressDescription || "Progress"}
+														</span>
+														<span
+															style={{
+																fontFamily: "Cooper Black, Cooper Std, serif",
+																color: "#405169",
+																fontWeight: 700,
+															}}>
+															{activityProgress.get(opp.id) || 0} /{" "}
+															{opp.totalRequired}
+														</span>
+													</div>
+													<Progress
+														value={
+															((activityProgress.get(opp.id) || 0) /
+																opp.totalRequired) *
+															100
+														}
+														className="h-2"
+													/>
+												</div>
+											)}
+
+											<div className="flex items-center gap-2 justify-between">
+												<Badge
+													className="text-xs border-0"
+													style={{
+														backgroundColor: "#9D5C45",
+														color: "white",
+														fontFamily: "Cooper Black, Cooper Std, serif",
+														fontWeight: 700,
+													}}>
+													+{opp.xp} XP{opp.requiresMultiple && " total"}
+												</Badge>
+												<PhotoVerification
+													taskTitle={opp.title}
+													taskDescription={`Volunteer at ${opp.location} for ${opp.duration}`}
+													xpReward={
+														opp.requiresMultiple && opp.totalRequired
+															? Math.round(opp.xp / opp.totalRequired)
+															: opp.xp
+													}
+													onVerified={() =>
+														handleComplete(
+															opp.id,
+															opp.requiresMultiple && opp.totalRequired
+																? Math.round(opp.xp / opp.totalRequired)
+																: opp.xp,
+															opp.requiresMultiple,
+															opp.totalRequired
+														)
+													}
+													buttonOnly={true}
+												/>
+											</div>
+										</div>
+									</Card>
+								))
+							)}
+						</TabsContent>
+
+						<TabsContent value="crisis" className="space-y-4">
+							{crisisAlerts.length === 0 ? (
+								<Card
+									className="p-8 border-0 shadow-md text-center"
+									style={{ backgroundColor: "#FAF7EB" }}>
+									<p
+										style={{
+											fontFamily: "Cooper Black, Cooper Std, serif",
+											color: "#405169",
+										}}>
+										All crisis alerts addressed! Click refresh for new ones.
+									</p>
+								</Card>
+							) : (
+								crisisAlerts.map((alert) => (
+									<Card
+										key={alert.id}
+										className="p-4 border-0 shadow-md"
+										style={{
+											backgroundColor: "#FAF7EB",
+											borderLeft: "4px solid #9D5C45",
+										}}>
+										<div className="flex flex-col gap-3">
+											<div className="flex-1">
+												<div className="flex items-center gap-2 mb-2">
+													<AlertCircle
+														className="w-5 h-5"
+														style={{ color: "#9D5C45" }}
+													/>
+													<h3
+														style={{
+															fontFamily: "Cooper Black, Cooper Std, serif",
+															fontWeight: 900,
+															fontSize: "18px",
+															color: "#405169",
+														}}>
+														{alert.title}
+													</h3>
+												</div>
+												<p
+													className="mb-2 text-sm opacity-70"
+													style={{
+														fontFamily: "Cooper Black, Cooper Std, serif",
+														color: "#405169",
+													}}>
+													{alert.location}
+												</p>
+												<div
+													className="flex items-center gap-1 mb-3 text-xs opacity-70"
+													style={{ color: "#405169" }}>
+													<Calendar className="w-3 h-3 flex-shrink-0" />
+													<span
+														style={{
+															fontFamily: "Cooper Black, Cooper Std, serif",
+														}}>
+														{alert.date} • {alert.time}
+													</span>
+												</div>
+												<div className="flex gap-2 flex-wrap">
+													<Badge
+														className="border-0"
+														style={{
+															backgroundColor:
+																alert.urgency === "high"
+																	? "#9D5C45"
+																	: "#D4C883",
+															color:
+																alert.urgency === "high" ? "white" : "#405169",
+															fontFamily: "Cooper Black, Cooper Std, serif",
+															fontWeight: 700,
+														}}>
+														{alert.urgency === "high" ? "Urgent" : "Needed"}
+													</Badge>
+													<Badge
+														variant="outline"
+														style={{
+															fontFamily: "Cooper Black, Cooper Std, serif",
+															borderColor: "#C4B77D",
+															color: "#405169",
+														}}>
+														{alert.volunteers} volunteers
+													</Badge>
+												</div>
+											</div>
+
+											{/* Progress Bar for Multi-Step Activities */}
+											{alert.requiresMultiple && alert.totalRequired && (
+												<div className="space-y-1">
+													<div className="flex justify-between text-xs">
+														<span
+															style={{
+																fontFamily: "Cooper Black, Cooper Std, serif",
+																color: "#405169",
+															}}>
+															{alert.progressDescription || "Progress"}
+														</span>
+														<span
+															style={{
+																fontFamily: "Cooper Black, Cooper Std, serif",
+																color: "#405169",
+																fontWeight: 700,
+															}}>
+															{activityProgress.get(alert.id) || 0} /{" "}
+															{alert.totalRequired}
+														</span>
+													</div>
+													<Progress
+														value={
+															((activityProgress.get(alert.id) || 0) /
+																alert.totalRequired) *
+															100
+														}
+														className="h-2"
+													/>
+												</div>
+											)}
+
+											<div className="flex items-center gap-2 justify-between">
+												<Badge
+													className="border-0"
+													style={{
+														backgroundColor: "#9D5C45",
+														color: "white",
+														fontFamily: "Cooper Black, Cooper Std, serif",
+														fontWeight: 700,
+													}}>
+													+{alert.xp} XP{alert.requiresMultiple && " total"}
+												</Badge>
+												<PhotoVerification
+													taskTitle={alert.title}
+													taskDescription={`Help with ${alert.title} at ${alert.location}`}
+													xpReward={
+														alert.requiresMultiple && alert.totalRequired
+															? Math.round(alert.xp / alert.totalRequired)
+															: alert.xp
+													}
+													onVerified={() =>
+														handleComplete(
+															alert.id,
+															alert.requiresMultiple && alert.totalRequired
+																? Math.round(alert.xp / alert.totalRequired)
+																: alert.xp,
+															alert.requiresMultiple,
+															alert.totalRequired
+														)
+													}
+													buttonOnly={true}
+												/>
+											</div>
+										</div>
+									</Card>
+								))
+							)}
+						</TabsContent>
+
+						<TabsContent value="games" className="space-y-4">
+							{miniGames.length === 0 ? (
+								<Card
+									className="p-8 border-0 shadow-md text-center"
+									style={{ backgroundColor: "#FAF7EB" }}>
+									<p
+										style={{
+											fontFamily: "Cooper Black, Cooper Std, serif",
+											color: "#405169",
+										}}>
+										All mini-games completed! Click refresh for new ones.
+									</p>
+								</Card>
+							) : (
+								miniGames.map((game) => (
+									<Card
+										key={game.id}
+										className="p-4 border-0 shadow-md"
+										style={{ backgroundColor: "#FAF7EB" }}>
+										<div className="flex flex-col gap-3">
+											<div className="flex gap-4 flex-1">
+												<div
+													className="w-12 h-12 rounded-lg flex items-center justify-center shadow-sm flex-shrink-0"
+													style={{ backgroundColor: "#E8DC93" }}>
+													<span className="text-2xl">{game.icon}</span>
+												</div>
+												<div className="flex-1 min-w-0">
+													<h3
+														className="mb-2"
+														style={{
+															fontFamily: "Cooper Black, Cooper Std, serif",
+															fontWeight: 900,
+															fontSize: "18px",
+															color: "#405169",
+														}}>
+														{game.title}
+													</h3>
+													<p
+														className="text-sm opacity-70 mb-2"
+														style={{
+															fontFamily: "Cooper Black, Cooper Std, serif",
+															color: "#405169",
+														}}>
+														{game.description}
+													</p>
+													<div
+														className="flex items-center gap-1 text-xs opacity-70"
+														style={{ color: "#405169" }}>
+														<Clock className="w-3 h-3 flex-shrink-0" />
+														<span
+															style={{
+																fontFamily: "Cooper Black, Cooper Std, serif",
+															}}>
+															{game.time}
+														</span>
+													</div>
+												</div>
+											</div>
+
+											{/* Progress Bar for Multi-Step Activities */}
+											{game.requiresMultiple && game.totalRequired && (
+												<div className="space-y-1">
+													<div className="flex justify-between text-xs">
+														<span
+															style={{
+																fontFamily: "Cooper Black, Cooper Std, serif",
+																color: "#405169",
+															}}>
+															{game.progressDescription || "Progress"}
+														</span>
+														<span
+															style={{
+																fontFamily: "Cooper Black, Cooper Std, serif",
+																color: "#405169",
+																fontWeight: 700,
+															}}>
+															{activityProgress.get(game.id) || 0} /{" "}
+															{game.totalRequired}
+														</span>
+													</div>
+													<Progress
+														value={
+															((activityProgress.get(game.id) || 0) /
+																game.totalRequired) *
+															100
+														}
+														className="h-2"
+													/>
+												</div>
+											)}
+
+											<div className="flex items-center gap-2 justify-between">
+												<Badge
+													className="border-0"
+													style={{
+														backgroundColor: "#4A5A3C",
+														color: "white",
+														fontFamily: "Cooper Black, Cooper Std, serif",
+														fontWeight: 700,
+													}}>
+													+{game.xp} XP{game.requiresMultiple && " total"}
+												</Badge>
+												<PhotoVerification
+													taskTitle={game.title}
+													taskDescription={game.description}
+													xpReward={
+														game.requiresMultiple && game.totalRequired
+															? Math.round(game.xp / game.totalRequired)
+															: game.xp
+													}
+													onVerified={() =>
+														handleComplete(
+															game.id,
+															game.requiresMultiple && game.totalRequired
+																? Math.round(game.xp / game.totalRequired)
+																: game.xp,
+															game.requiresMultiple,
+															game.totalRequired
+														)
+													}
+													buttonOnly={true}
+												/>
+											</div>
+										</div>
+									</Card>
+								))
+							)}
+						</TabsContent>
+					</Tabs>
+				)}
+			</div>
+		</div>
+	);
+}

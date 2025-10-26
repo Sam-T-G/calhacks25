@@ -1,0 +1,98 @@
+import React, { useState } from "react";
+import { Home } from "./components/Home";
+import { ServeSection } from "./components/ServeSection";
+import { ProductivitySection } from "./components/ProductivitySection";
+import { SelfImproveSection } from "./components/SelfImproveSection";
+import { ShopSection } from "./components/ShopSection";
+import { VoiceAssistant } from "./components/VoiceAssistant";
+import { Toaster } from "./components/ui/sonner";
+import { userPreferences } from "./config/userPreferences";
+
+export type Section =
+	| "home"
+	| "serve"
+	| "productivity"
+	| "self-improve"
+	| "shop";
+
+export default function App() {
+	const [currentSection, setCurrentSection] = useState<Section>("home");
+	const [xpPoints, setXpPoints] = useState(2450);
+	const [isVoiceAssistantActive, setIsVoiceAssistantActive] = useState(false);
+
+	const addXP = (points: number) => {
+		setXpPoints((prev) => prev + points);
+	};
+
+	const spendXP = (points: number) => {
+		if (xpPoints >= points) {
+			setXpPoints((prev) => prev - points);
+			return true;
+		}
+		return false;
+	};
+
+	const renderSection = () => {
+		switch (currentSection) {
+			case "home":
+				return (
+					<Home
+						xpPoints={xpPoints}
+						onNavigate={setCurrentSection}
+						onVoiceAssistant={() => setIsVoiceAssistantActive(true)}
+					/>
+				);
+			case "serve":
+				return (
+					<ServeSection
+						onBack={() => setCurrentSection("home")}
+						onEarnXP={addXP}
+						userPreferences={userPreferences}
+					/>
+				);
+			case "productivity":
+				return (
+					<ProductivitySection
+						onBack={() => setCurrentSection("home")}
+						onEarnXP={addXP}
+					/>
+				);
+			case "self-improve":
+				return (
+					<SelfImproveSection
+						onBack={() => setCurrentSection("home")}
+						onEarnXP={addXP}
+					/>
+				);
+			case "shop":
+				return (
+					<ShopSection
+						xpPoints={xpPoints}
+						onBack={() => setCurrentSection("home")}
+						onSpendXP={spendXP}
+					/>
+				);
+			default:
+				return (
+					<Home
+						xpPoints={xpPoints}
+						onNavigate={setCurrentSection}
+						onVoiceAssistant={() => setIsVoiceAssistantActive(true)}
+					/>
+				);
+		}
+	};
+
+	return (
+		<div
+			className="min-h-screen relative"
+			style={{ backgroundColor: "#E8DC93" }}>
+			{renderSection()}
+			<VoiceAssistant
+				isActive={isVoiceAssistantActive}
+				onClose={() => setIsVoiceAssistantActive(false)}
+			/>
+			<Toaster />
+		</div>
+	);
+}
