@@ -154,29 +154,29 @@ class Assistant(Agent):
                 "content": message.content
             })
             
-            # Check if orchestration is needed
-            if self.should_orchestrate(message.content):
-                logger.info(f"Orchestration triggered by: {message.content}")
-                commands = await self.orchestrate_with_claude()
+            # REAL-TIME: Send EVERY user message to Claude for analysis
+            logger.info(f"Real-time transcript: {message.content}")
+            commands = await self.orchestrate_with_claude()
+            
+            if commands:
+                # Send commands to frontend immediately
+                await self.send_command_to_frontend(commands)
                 
-                if commands:
-                    # Send commands to frontend
-                    await self.send_command_to_frontend(commands)
-                    
-                    # Update current page if navigation occurred
-                    if commands.get("navigation"):
-                        self.current_page = commands["navigation"].get("page", self.current_page)
-                    
-                    # Use Claude's voice response if available
-                    voice_response = commands.get("voice_response")
-                    if voice_response:
-                        # Add to conversation history
-                        self.conversation_history.append({
-                            "role": "assistant",
-                            "content": voice_response
-                        })
-                        # This will be spoken by the TTS
-                        return voice_response
+                # Update current page if navigation occurred
+                if commands.get("navigation"):
+                    self.current_page = commands["navigation"].get("page", self.current_page)
+                    logger.info(f"Orchestrated navigation to: {self.current_page}")
+                
+                # Use Claude's voice response if available
+                voice_response = commands.get("voice_response")
+                if voice_response:
+                    # Add to conversation history
+                    self.conversation_history.append({
+                        "role": "assistant",
+                        "content": voice_response
+                    })
+                    # This will be spoken by the TTS
+                    return voice_response
         
         # Track assistant messages
         elif message.role == "assistant":
