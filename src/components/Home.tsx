@@ -149,17 +149,17 @@ export function Home({ xpPoints, onNavigate, onVoiceAssistant }: HomeProps) {
 						speak with DoGood companion
 					</span>
 				</button>
-			</div>
 
-			{/* Yerba Madre Link - Fixed at Bottom */}
-			<a
-				href="https://yerbamadre.com/"
-				target="_blank"
-				rel="noopener noreferrer"
-				className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-20 hover:opacity-80 transition-opacity"
-				style={{ maxWidth: "80px" }}>
-				<img src={yerbImage} alt="Yerba Madre" className="w-full h-auto" />
-			</a>
+				{/* Yerba Madre Link - At Bottom of Content */}
+				<a
+					href="https://yerbamadre.com/"
+					target="_blank"
+					rel="noopener noreferrer"
+					className="mt-12 mb-8 mx-auto hover:opacity-80 transition-opacity"
+					style={{ maxWidth: "80px" }}>
+					<img src={yerbImage} alt="Yerba Madre" className="w-full h-auto" />
+				</a>
+			</div>
 		</div>
 	);
 }
