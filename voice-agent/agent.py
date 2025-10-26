@@ -30,9 +30,10 @@ async def entrypoint(ctx: JobContext):
 
     vad = silero.VAD.load()
     session = AgentSession(
-       stt="deepgram/nova-3",
+       # Using LiveKit Inference - included with LiveKit Cloud!
+       stt="assemblyai/universal-streaming:en",
        llm="openai/gpt-4o-mini",
-       tts="cartesia/sonic-2:a167e0f3-df7e-4d52-a9c3-f949145efdab",
+       tts="cartesia/sonic-2:9626c31c-bec5-4cca-baa8-f8ba9e84c8bc",
        vad=vad,
        turn_detection=MultilingualModel(),
    )

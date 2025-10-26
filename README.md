@@ -86,18 +86,34 @@ The "DoGood Companion" voice assistant requires LiveKit configuration:
 
 ## Running the code
 
-**Frontend:**
+### Quick Start (Recommended)
+
+Run everything with a single command:
+```bash
+./start-dev.sh
+```
+
+This will start:
+- LiveKit voice agent (for DoGood Companion)
+- API server (for LiveKit token generation)
+- Vite development server (React frontend)
+
+The frontend will be available at `http://localhost:3000`.
+
+### Manual Start (Alternative)
+
+If you prefer to run services separately:
+
+**Terminal 1 - Voice Agent:**
+```bash
+cd voice-agent
+uv run agent.py dev
+```
+
+**Terminal 2 - Frontend & API:**
 ```bash
 npm run dev
 ```
-
-**Voice Agent (in a separate terminal):**
-```bash
-cd voice-agent
-uv run agent.py start
-```
-
-The frontend will be available at `http://localhost:3000`.
 
 ## Features
 
