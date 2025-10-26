@@ -852,8 +852,8 @@ export function ServeSection({
 					</Tabs>
 				)}
 
-				{/* Pull to Refresh Indicator / Refresh Button */}
-				{isPulling ? (
+				{/* Pull to Refresh Indicator */}
+				{isPulling && (
 					<div
 						className="fixed bottom-0 left-0 right-0 flex justify-center py-4 transition-opacity"
 						style={{
@@ -882,13 +882,11 @@ export function ServeSection({
 							</span>
 						</div>
 					</div>
-				) : isRegenerating ? (
-					<div
-						className="fixed bottom-0 left-0 right-0 flex justify-center py-4"
-						style={{
-							backgroundColor: "#E8DC93",
-							boxShadow: "0 -2px 8px rgba(0,0,0,0.1)",
-						}}>
+				)}
+
+				{/* Refresh Button at Bottom of Content */}
+				<div className="flex justify-center py-6 pb-12">
+					{isRegenerating ? (
 						<div className="flex items-center gap-3">
 							<div
 								className="w-8 h-8 rounded-full"
@@ -909,20 +907,7 @@ export function ServeSection({
 								Refreshing...
 							</span>
 						</div>
-						<style>{`
-							@keyframes spin {
-								0% { transform: rotate(0deg); }
-								100% { transform: rotate(360deg); }
-							}
-						`}</style>
-					</div>
-				) : (
-					<div
-						className="fixed bottom-0 left-0 right-0 flex justify-center py-4 z-50"
-						style={{
-							backgroundColor: "#E8DC93",
-							boxShadow: "0 -2px 8px rgba(0,0,0,0.1)",
-						}}>
+					) : (
 						<Button
 							variant="ghost"
 							onClick={handleRegenerate}
@@ -936,8 +921,14 @@ export function ServeSection({
 							<RefreshCw className="w-5 h-5 mr-2" />
 							Refresh Activities
 						</Button>
-					</div>
-				)}
+					)}
+				</div>
+				<style>{`
+					@keyframes spin {
+						0% { transform: rotate(0deg); }
+						100% { transform: rotate(360deg); }
+					}
+				`}</style>
 			</div>
 		</div>
 	);
