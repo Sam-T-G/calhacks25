@@ -1,6 +1,6 @@
 # DoGood App Features
 
-This is a code bundle for DoGood App Features. The original project is available at https://www.figma.com/design/6sOViGx6ABV7U0aTZF4G6b/DoGood-App-Features.
+This is a code bundle for DoGood App Features. The original project is available at https://www.figma.com/design/6sOViGx6ABV7U0aTZF4G6b/DoGood-App-Features. The fully functional site is found here: https://calhacks25-gamma.vercel.app/
 
 ## Project Structure
 
