@@ -45,6 +45,8 @@ export default async function handler(req, res) {
 			claudeRequest = buildPhotoVerificationRequest(params);
 		} else if (action === "orchestrate") {
 			claudeRequest = buildOrchestrationRequest(params);
+		} else if (action === "extract_persona") {
+			claudeRequest = buildPersonaExtractionRequest(params);
 		} else {
 			return res.status(400).json({ error: "Invalid action" });
 		}
@@ -428,4 +430,54 @@ Examples:
 - "What can I do to help my community?" → navigate to serve + generate_activities (NOT just suggestions)
 
 Generate ONLY the JSON response, no other text.`;
+}
+
+function buildPersonaExtractionRequest(params) {
+	const { conversation } = params;
+	const prompt = buildPersonaExtractionPrompt(conversation);
+
+	return {
+		model: "claude-3-5-sonnet-20241022",
+		max_tokens: 2048,
+		messages: [
+			{
+				role: "user",
+				content: prompt,
+			},
+		],
+	};
+}
+
+function buildPersonaExtractionPrompt(conversation) {
+	return `You are analyzing a conversation between a user and an AI assistant. Your task is to extract persona information about the user and format it as structured data.
+
+Conversation:
+${conversation}
+
+Extract the following information if mentioned:
+1. Name (if shared)
+2. Causes they care about (environment, education, animals, poverty, etc.)
+3. Interests
+4. Skills they have or want to develop
+5. Availability (weekends, evenings, flexible, etc.)
+6. Goals and motivation
+7. Volunteer experience level
+8. Productivity style
+9. Preferred activity types (hands-on, remote, team-based)
+
+Return ONLY valid JSON in this format:
+\`\`\`json
+{
+  "causes": ["climate change", "education"],
+  "interests": ["gardening", "teaching"],
+  "skills": ["communication", "organization"],
+  "available_hours": "weekends",
+  "motivation": "Want to make a difference in my community",
+  "volunteer_experience": "some",
+  "goals": ["career growth", "community impact"]
+}
+\`\`\`
+
+Include ONLY fields that were explicitly mentioned or clearly implied in the conversation. Omit any fields not mentioned.
+Generate ONLY the JSON, no other text.`;
 }

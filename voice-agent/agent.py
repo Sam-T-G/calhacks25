@@ -15,6 +15,7 @@ from livekit.agents import (
     llm,
 )
 from livekit.plugins import noise_cancellation, silero
+from persona_schema import PersonaData
 
 logger = logging.getLogger("agent")
 
@@ -23,25 +24,42 @@ load_dotenv(".env.local")
 
 class Assistant(Agent):
     def __init__(self, user_context: str = "", room=None) -> None:
-        # Build instructions with user context
+        # Build instructions - now focused on persona collection
         base_instructions = (
-            "You are DoGood Companion, a helpful voice assistant for the DoGood app. "
-            "The app helps people coordinate service, productivity, and self-improvement activities. "
-            "Be encouraging, friendly, and concise. Speak no more than 3-4 sentences at a time. "
-            "Help users choose between self improvement, service, and productivity based on their interests and history."
+            "You are DoGood Companion, a friendly voice assistant for the DoGood app. "
+            "Your primary role is to CONVERSE WITH THE USER to understand who they are, what they care about, "
+            "and what they want to accomplish. This conversation will help personalize their entire app experience. "
+            "\n\n"
+            "PERSONA COLLECTION GOALS - Ask natural questions to learn about:\n"
+            "1. What causes matter to them (environment, education, poverty, animals, etc.)\n"
+            "2. What skills they have or want to develop\n"
+            "3. When they're available to help (weekends, evenings, flexible)\n"
+            "4. What they want to get out of volunteering/self-improvement\n"
+            "5. Their previous experience with community service\n"
+            "\n"
+            "Be conversational, warm, and genuinely curious. Ask 2-3 questions at a time. "
+            "Don't overwhelm with too many questions at once. "
+            "After collecting enough information (5-7 responses), acknowledge their answers "
+            "and say 'Great! Let me use this info to personalize activities for you.'"
         )
 
-        # Add context if available
+        # Add existing context if available
         if user_context:
-            base_instructions += f"\n\nUser Context:\n{user_context}\n\nUse this context to personalize your responses and recommendations."
+            base_instructions += f"\n\nExisting User Context:\n{user_context}\n\nUse this to inform your questions."
 
         super().__init__(instructions=base_instructions)
         
-        # Track conversation for orchestration
+        # Track conversation for orchestration AND persona building
         self.conversation_history = []
         self.user_context = user_context
         self.room = room
         self.current_page = "home"
+        
+        # Persona collection state
+        self.persona = PersonaData()
+        self.is_collecting_persona = True
+        self.persona_questions_asked = 0
+        self.persona_answers_collected = 0
         
         # Intent detection keywords for orchestration
         self.orchestration_keywords = [
@@ -52,6 +70,48 @@ class Assistant(Agent):
         
         # Backend API endpoint (defaults to localhost for dev)
         self.backend_url = os.getenv("BACKEND_URL", "http://localhost:3001")
+    
+    def extract_persona_from_conversation(self, conversation_text: str) -> None:
+        """Extract persona information from conversation using Claude"""
+        try:
+            # Call Claude to analyze conversation and extract persona data
+            response = httpx.post(
+                f"{self.backend_url}/api/claude",
+                json={
+                    "action": "extract_persona",
+                    "conversation": conversation_text
+                },
+                timeout=30.0
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("content") and data["content"][0].get("text"):
+                    # Parse and update persona data
+                    # TODO: Parse Claude response and populate self.persona
+                    logger.info("Persona data extracted from conversation")
+        except Exception as e:
+            logger.error(f"Failed to extract persona: {e}")
+    
+    async def send_persona_to_frontend(self) -> None:
+        """Send collected persona data to frontend for storage"""
+        if not self.room or not self.room.local_participant:
+            return
+        
+        try:
+            persona_dict = self.persona.to_dict()
+            command = {
+                "action": "update_persona",
+                "persona_data": persona_dict
+            }
+            
+            await self.room.local_participant.publish_data(
+                json.dumps(command).encode('utf-8'),
+                reliable=True
+            )
+            logger.info("[Agent] Sent persona data to frontend")
+        except Exception as e:
+            logger.error(f"[Agent] Failed to send persona data: {e}")
     
     def should_orchestrate(self, text: str) -> bool:
         """Check if user input suggests orchestration is needed"""
