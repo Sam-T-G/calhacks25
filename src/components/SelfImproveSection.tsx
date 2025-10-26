@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import {
@@ -185,20 +185,21 @@ export function SelfImproveSection({
 
 					<div className="flex-1 text-center">
 						<h1
-							className="mb-0"
 							style={{
 								fontFamily: "Cooper Black, Cooper Std, serif",
 								fontWeight: 900,
 								fontSize: "28px",
 								color: "#405169",
+								marginBottom: "2px",
 							}}>
 							Self-Improve
 						</h1>
 						<p
-							className="text-xs opacity-70 mt-0"
+							className="text-xs opacity-70"
 							style={{
 								fontFamily: "Cooper Black, Cooper Std, serif",
 								color: "#405169",
+								marginTop: "0",
 							}}>
 							Build better habits and grow
 						</p>
@@ -256,7 +257,7 @@ export function SelfImproveSection({
 			{/* Content with top padding for fixed header */}
 			<div
 				className="relative z-10 max-w-4xl mx-auto px-6 md:px-8 pb-6"
-				style={{ paddingTop: "140px" }}>
+				style={{ paddingTop: "110px" }}>
 				{/* AI-Powered Insights */}
 				<Card
 					className="p-4 mb-6 text-white border-0 shadow-md"

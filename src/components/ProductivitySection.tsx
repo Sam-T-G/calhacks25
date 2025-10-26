@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import {
 	ArrowLeft,
 	Timer,
-	CheckCircle,
 	Bell,
 	Calendar,
 	Play,
@@ -198,11 +197,6 @@ export function ProductivitySection({
 		});
 	};
 
-	const progress =
-		((parseInt(customMinutes) * 60 - timeLeft) /
-			(parseInt(customMinutes) * 60)) *
-		100;
-
 	return (
 		<div
 			className="min-h-screen relative"
@@ -239,20 +233,21 @@ export function ProductivitySection({
 
 					<div className="flex-1 text-center">
 						<h1
-							className="mb-0"
 							style={{
 								fontFamily: "Cooper Black, Cooper Std, serif",
 								fontWeight: 900,
 								fontSize: "28px",
 								color: "#405169",
+								marginBottom: "2px",
 							}}>
 							Be Productive
 						</h1>
 						<p
-							className="text-xs opacity-70 mt-0"
+							className="text-xs opacity-70"
 							style={{
 								fontFamily: "Cooper Black, Cooper Std, serif",
 								color: "#405169",
+								marginTop: "0",
 							}}>
 							Focus and achieve your goals
 						</p>
@@ -310,7 +305,7 @@ export function ProductivitySection({
 			{/* Content with top padding for fixed header */}
 			<div
 				className="relative z-10 max-w-4xl mx-auto px-6 md:px-8 pb-6"
-				style={{ paddingTop: "140px" }}>
+				style={{ paddingTop: "110px" }}>
 				{/* Focus Timer - Modern Layout */}
 				<Card
 					className="p-6 mb-6 border-0 shadow-xl rounded-2xl relative overflow-hidden"

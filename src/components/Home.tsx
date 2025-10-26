@@ -10,17 +10,23 @@ import {
 import { useState } from "react";
 import { contextService } from "../services/contextService";
 import dgLogo from "../assets/images/dglogo.png";
+import type { Section } from "../App";
 
 interface HomeProps {
 	xpPoints: number;
-	onNavigate: (section: string) => void;
+	onNavigate: (section: Section) => void;
 	onVoiceAssistant: () => void;
 }
 
 export function Home({ xpPoints, onNavigate, onVoiceAssistant }: HomeProps) {
 	const [showContextDebug, setShowContextDebug] = useState(false);
 
-	const categories = [
+	const categories: Array<{
+		id: Section;
+		title: string;
+		icon: any;
+		bgColor: string;
+	}> = [
 		{
 			id: "serve",
 			title: "serve",

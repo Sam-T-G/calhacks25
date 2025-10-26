@@ -4,20 +4,85 @@ import {
 	useVoiceAssistant,
 	BarVisualizer,
 	RoomAudioRenderer,
+	useRoomContext,
 } from "@livekit/components-react";
 import "@livekit/components-styles";
 import { contextService } from "../services/contextService";
+import { toast } from "sonner";
+import type { Section } from "../App";
 
 interface VoiceAssistantProps {
 	isActive: boolean;
 	onClose: () => void;
+	onNavigate?: (section: Section) => void;
+	onExecuteAction?: (action: any) => void;
 }
 
-export function VoiceAssistant({ isActive, onClose }: VoiceAssistantProps) {
+export function VoiceAssistant({
+	isActive,
+	onClose,
+	onNavigate,
+	onExecuteAction,
+}: VoiceAssistantProps) {
 	const [token, setToken] = useState<string>("");
 	const [wsUrl, setWsUrl] = useState<string>("");
 	const [isConnecting, setIsConnecting] = useState(false);
 	const [error, setError] = useState<string>("");
+
+	// Handle Claude orchestration commands from voice agent
+	const handleClaudeCommand = useCallback(
+		(payload: Uint8Array) => {
+			try {
+				const data = JSON.parse(new TextDecoder().decode(payload));
+				console.log("[VoiceAssistant] Received Claude command:", data);
+
+				// Log orchestration event
+				contextService.logOrchestration(data.intent || "unknown", data);
+
+				// Execute navigation
+				if (data.navigation && onNavigate) {
+					const page = data.navigation.page as Section;
+					console.log("[VoiceAssistant] Navigating to:", page);
+					onNavigate(page);
+				}
+
+				// Execute actions
+				if (data.actions && onExecuteAction) {
+					data.actions.forEach((action: any) => {
+						console.log("[VoiceAssistant] Executing action:", action);
+						onExecuteAction(action);
+					});
+				}
+
+				// Apply UI updates
+				if (data.ui_updates) {
+					if (data.ui_updates.show_notification) {
+						const notif = data.ui_updates.show_notification;
+						const toastType = notif.type || "info";
+						if (toastType === "success") {
+							toast.success(notif.message);
+						} else if (toastType === "error") {
+							toast.error(notif.message);
+						} else {
+							toast.info(notif.message);
+						}
+					}
+				}
+
+				// Update context/preferences
+				if (data.context_updates) {
+					console.log(
+						"[VoiceAssistant] Updating preferences:",
+						data.context_updates
+					);
+					contextService.updatePreferences(data.context_updates);
+				}
+			} catch (err) {
+				console.error("[VoiceAssistant] Failed to parse Claude command:", err);
+			}
+		},
+		[onNavigate, onExecuteAction]
+	);
 
 	// Fetch LiveKit token when component becomes active
 	useEffect(() => {
@@ -184,7 +249,10 @@ export function VoiceAssistant({ isActive, onClose }: VoiceAssistantProps) {
 							audio={true}
 							video={false}
 							onDisconnected={handleDisconnect}>
-							<VoiceAssistantContent onEndConvo={handleDisconnect} />
+							<VoiceAssistantContent
+								onEndConvo={handleDisconnect}
+								onClaudeCommand={handleClaudeCommand}
+							/>
 						</LiveKitRoom>
 					</div>
 				</div>
@@ -193,8 +261,30 @@ export function VoiceAssistant({ isActive, onClose }: VoiceAssistantProps) {
 	);
 }
 
-function VoiceAssistantContent({ onEndConvo }: { onEndConvo: () => void }) {
+function VoiceAssistantContent({
+	onEndConvo,
+	onClaudeCommand,
+}: {
+	onEndConvo: () => void;
+	onClaudeCommand: (payload: Uint8Array) => void;
+}) {
 	const { state, audioTrack } = useVoiceAssistant();
+	const room = useRoomContext();
+
+	// Listen for data messages from voice agent
+	useEffect(() => {
+		if (!room) return;
+
+		const handleData = (payload: Uint8Array) => {
+			onClaudeCommand(payload);
+		};
+
+		room.on("dataReceived", handleData);
+
+		return () => {
+			room.off("dataReceived", handleData);
+		};
+	}, [room, onClaudeCommand]);
 
 	return (
 		<div className="flex flex-col items-center gap-6 w-full">
@@ -209,10 +299,6 @@ function VoiceAssistantContent({ onEndConvo }: { onEndConvo: () => void }) {
 						barCount={7}
 						trackRef={audioTrack}
 						className="voice-assistant-visualizer"
-						options={{
-							barColor: "#E8DC93",
-							minHeight: 16,
-						}}
 					/>
 				)}
 				{!audioTrack && (

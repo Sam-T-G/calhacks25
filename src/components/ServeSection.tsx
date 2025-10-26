@@ -240,20 +240,21 @@ export function ServeSection({
 
 					<div className="flex-1 text-center">
 						<h1
-							className="mb-0"
 							style={{
 								fontFamily: "Cooper Black, Cooper Std, serif",
 								fontWeight: 900,
 								fontSize: "28px",
 								color: "#405169",
+								marginBottom: "2px",
 							}}>
 							Serve
 						</h1>
 						<p
-							className="text-xs opacity-70 mt-0"
+							className="text-xs opacity-70"
 							style={{
 								fontFamily: "Cooper Black, Cooper Std, serif",
 								color: "#405169",
+								marginTop: "0",
 							}}>
 							Make a positive impact
 						</p>
@@ -311,7 +312,7 @@ export function ServeSection({
 			{/* Content with top padding for fixed header */}
 			<div
 				className="relative z-10 max-w-4xl mx-auto px-6 md:px-8 pb-6"
-				style={{ paddingTop: "140px" }}>
+				style={{ paddingTop: "110px" }}>
 				{isLoading ? (
 					<div className="flex items-center justify-center py-12">
 						<div className="text-center">

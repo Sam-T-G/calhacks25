@@ -1,5 +1,7 @@
 import logging
 import json
+import os
+import httpx
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
 from dotenv import load_dotenv
@@ -10,6 +12,7 @@ from livekit.agents import (
     RoomInputOptions,
     WorkerOptions,
     cli,
+    llm,
 )
 from livekit.plugins import noise_cancellation, silero
 
@@ -19,7 +22,7 @@ load_dotenv(".env.local")
 
 
 class Assistant(Agent):
-    def __init__(self, user_context: str = "") -> None:
+    def __init__(self, user_context: str = "", room=None) -> None:
         # Build instructions with user context
         base_instructions = (
             "You are DoGood Companion, a helpful voice assistant for the DoGood app. "
@@ -33,6 +36,156 @@ class Assistant(Agent):
             base_instructions += f"\n\nUser Context:\n{user_context}\n\nUse this context to personalize your responses and recommendations."
 
         super().__init__(instructions=base_instructions)
+        
+        # Track conversation for orchestration
+        self.conversation_history = []
+        self.user_context = user_context
+        self.room = room
+        self.current_page = "home"
+        
+        # Intent detection keywords for orchestration
+        self.orchestration_keywords = [
+            "show me", "navigate", "take me to", "i want to",
+            "help me find", "find me", "get me", "open",
+            "start", "begin", "can you", "could you"
+        ]
+        
+        # Backend API endpoint (defaults to localhost for dev)
+        self.backend_url = os.getenv("BACKEND_URL", "http://localhost:3001")
+    
+    def should_orchestrate(self, text: str) -> bool:
+        """Check if user input suggests orchestration is needed"""
+        text_lower = text.lower()
+        return any(keyword in text_lower for keyword in self.orchestration_keywords)
+    
+    async def orchestrate_with_claude(self) -> dict:
+        """Call Claude API for orchestration decisions"""
+        try:
+            # Build transcript from conversation history
+            transcript = "\n".join([
+                f"{msg['role']}: {msg['content']}" 
+                for msg in self.conversation_history[-10:]  # Last 10 exchanges
+            ])
+            
+            # Call backend orchestration endpoint
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{self.backend_url}/api/claude",
+                    json={
+                        "action": "orchestrate",
+                        "transcript": transcript,
+                        "userContext": self.user_context,
+                        "currentPage": self.current_page
+                    },
+                    timeout=30.0
+                )
+                
+                if response.status_code != 200:
+                    logger.error(f"Orchestration API error: {response.status_code}")
+                    return None
+                
+                data = response.json()
+                
+                # Parse Claude's response
+                if not data.get("content") or not data["content"][0].get("text"):
+                    logger.error("Invalid orchestration response format")
+                    return None
+                
+                content = data["content"][0]["text"]
+                
+                # Extract JSON from response
+                json_match = None
+                if "```json" in content:
+                    start = content.find("```json") + 7
+                    end = content.find("```", start)
+                    json_str = content[start:end].strip()
+                    json_match = json_str
+                elif "{" in content:
+                    # Find first { and matching }
+                    start = content.find("{")
+                    brace_count = 0
+                    end = -1
+                    for i in range(start, len(content)):
+                        if content[i] == "{":
+                            brace_count += 1
+                        elif content[i] == "}":
+                            brace_count -= 1
+                            if brace_count == 0:
+                                end = i + 1
+                                break
+                    if end != -1:
+                        json_match = content[start:end]
+                
+                if json_match:
+                    commands = json.loads(json_match)
+                    logger.info(f"Claude orchestration: {commands.get('intent', 'unknown')}")
+                    return commands
+                else:
+                    logger.error("Failed to extract JSON from Claude response")
+                    return None
+                    
+        except Exception as e:
+            logger.error(f"Orchestration error: {e}")
+            return None
+    
+    async def send_command_to_frontend(self, commands: dict):
+        """Send orchestration commands to frontend via data channel"""
+        if not self.room:
+            logger.warning("No room available to send commands")
+            return
+        
+        try:
+            # Encode commands as JSON and send via data channel
+            data_packet = json.dumps(commands).encode('utf-8')
+            await self.room.local_participant.publish_data(
+                data_packet,
+                reliable=True
+            )
+            logger.info(f"Sent commands to frontend: {commands.get('intent', 'unknown')}")
+        except Exception as e:
+            logger.error(f"Failed to send commands to frontend: {e}")
+    
+    async def on_chat_received(self, message: llm.ChatMessage):
+        """Override to track conversation and trigger orchestration"""
+        # Track user messages
+        if message.role == "user":
+            self.conversation_history.append({
+                "role": "user",
+                "content": message.content
+            })
+            
+            # Check if orchestration is needed
+            if self.should_orchestrate(message.content):
+                logger.info(f"Orchestration triggered by: {message.content}")
+                commands = await self.orchestrate_with_claude()
+                
+                if commands:
+                    # Send commands to frontend
+                    await self.send_command_to_frontend(commands)
+                    
+                    # Update current page if navigation occurred
+                    if commands.get("navigation"):
+                        self.current_page = commands["navigation"].get("page", self.current_page)
+                    
+                    # Use Claude's voice response if available
+                    voice_response = commands.get("voice_response")
+                    if voice_response:
+                        # Add to conversation history
+                        self.conversation_history.append({
+                            "role": "assistant",
+                            "content": voice_response
+                        })
+                        # This will be spoken by the TTS
+                        return voice_response
+        
+        # Track assistant messages
+        elif message.role == "assistant":
+            self.conversation_history.append({
+                "role": "assistant",
+                "content": message.content
+            })
+        
+        return None
 
 async def get_user_context(ctx: JobContext) -> str:
     """Extract user context from participant metadata"""
@@ -76,6 +229,10 @@ async def entrypoint(ctx: JobContext):
     user_context = await get_user_context(ctx)
 
     vad = silero.VAD.load()
+    
+    # Create assistant with room reference for data channel communication
+    assistant = Assistant(user_context=user_context, room=ctx.room)
+    
     session = AgentSession(
        # Using LiveKit Inference - included with LiveKit Cloud!
        stt="assemblyai/universal-streaming:en",
@@ -85,16 +242,13 @@ async def entrypoint(ctx: JobContext):
        turn_detection=MultilingualModel(),
    )
 
-
     await session.start(
-        agent=Assistant(user_context=user_context),
+        agent=assistant,
         room=ctx.room,
         room_input_options=RoomInputOptions(
             noise_cancellation=noise_cancellation.BVC(),
         ),
     )
-
-    await ctx.connect()
 
 
 if __name__ == "__main__":

@@ -43,6 +43,8 @@ export default async function handler(req, res) {
 			claudeRequest = buildActivityGenerationRequest(params);
 		} else if (action === "verify_photo") {
 			claudeRequest = buildPhotoVerificationRequest(params);
+		} else if (action === "orchestrate") {
+			claudeRequest = buildOrchestrationRequest(params);
 		} else {
 			return res.status(400).json({ error: "Invalid action" });
 		}
@@ -288,4 +290,109 @@ Progress Tracking:
 - Make at least 1-2 activities in each category use progress tracking
 
 Generate only the JSON, no additional text.`;
+}
+
+function buildOrchestrationRequest(params) {
+	const { transcript, userContext, currentPage } = params;
+	const prompt = buildOrchestrationPrompt(transcript, userContext, currentPage);
+
+	return {
+		model: "claude-3-5-sonnet-20241022",
+		max_tokens: 2048,
+		messages: [
+			{
+				role: "user",
+				content: prompt,
+			},
+		],
+	};
+}
+
+function buildOrchestrationPrompt(transcript, userContext, currentPage) {
+	return `You are the orchestration brain for the DoGood app, a voice-controlled productivity, service, and self-improvement platform.
+
+Your role is to analyze voice conversations and make decisions about:
+1. Where to navigate the user
+2. What actions to trigger
+3. What UI updates to make
+4. What preferences/context to update
+5. What to say back to the user via voice
+
+Current Context:
+${userContext || "No context available"}
+
+Current Page: ${currentPage || "home"}
+
+Conversation Transcript:
+${transcript || "No conversation yet"}
+
+Available Capabilities:
+
+NAVIGATION (pages):
+- home: Main landing page with XP counter and category buttons
+- serve: Community service opportunities, crisis alerts, and mini-games
+- productivity: Focus timer, task management, productivity tracking
+- self-improve: Personal development activities, habit tracking, challenges
+- shop: Spend XP on rewards and items
+- stats: View progress, achievements, XP history
+
+ACTIONS (you can trigger multiple):
+- generate_activities: Generate new service opportunities (when user asks to see/find volunteering)
+- start_timer: Start productivity focus timer (params: { minutes: number, taskName: string })
+- generate_self_improve: Generate personal development activities
+- update_preferences: Update user interests/preferences
+- refresh_activities: Refresh current section's activities
+
+UI UPDATES:
+- open_modal: Open a modal (values: "preferences", "stats_detail", "task_detail")
+- highlight_element: Highlight UI element (values: "xp_counter", "navigation", "activities")
+- show_notification: Show a toast notification (params: { message: string, type: "success"|"info" })
+
+Analyze the conversation and respond with ONLY valid JSON in this EXACT format:
+
+\`\`\`json
+{
+  "intent": "brief description of what user wants",
+  "navigation": {
+    "page": "page_name",
+    "reason": "why navigating here"
+  },
+  "actions": [
+    {
+      "type": "action_name",
+      "params": {}
+    }
+  ],
+  "ui_updates": {
+    "show_notification": {
+      "message": "Brief message",
+      "type": "info"
+    }
+  },
+  "voice_response": "Natural, conversational response to speak back (2-3 sentences max)",
+  "context_updates": {
+    "interests": ["interest1", "interest2"],
+    "causes": ["cause1"],
+    "location": "city name"
+  }
+}
+\`\`\`
+
+Rules:
+1. Be proactive - if user mentions interests, capture them in context_updates
+2. Navigation is optional - only navigate if user clearly wants to see something
+3. Actions should directly fulfill user's request
+4. voice_response should be natural and encouraging
+5. Keep responses concise and actionable
+6. If user asks to see/find/show something, navigate AND trigger relevant generation
+7. Extract preferences from natural conversation (e.g., "I care about the environment" → context_updates)
+
+Examples:
+- "Show me volunteering opportunities" → navigate to serve + generate_activities
+- "I want to be productive" → navigate to productivity
+- "Start a 25 minute timer for studying" → navigate to productivity + start_timer
+- "I'm interested in helping animals" → update_preferences (no navigation needed)
+- "What can I do to help my community?" → navigate to serve + generate_activities
+
+Generate ONLY the JSON response, no other text.`;
 }

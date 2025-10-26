@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Home } from "./components/Home";
 import { ServeSection } from "./components/ServeSection";
 import { ProductivitySection } from "./components/ProductivitySection";
@@ -54,13 +54,58 @@ export default function App() {
 		return false;
 	};
 
+	// Handle voice navigation
+	const handleVoiceNavigation = (section: Section) => {
+		console.log("[App] Voice navigation to:", section);
+		setCurrentSection(section);
+	};
+
+	// Handle voice-triggered actions from Claude orchestration
+	const executeVoiceAction = (action: any) => {
+		console.log("[App] Executing voice action:", action);
+
+		switch (action.type) {
+			case "generate_activities":
+				// Activities will be auto-generated when navigating to serve section
+				console.log("[App] Triggering activity generation");
+				break;
+
+			case "start_timer":
+				// Navigate to productivity and timer will be available
+				if (action.params?.minutes) {
+					console.log(`[App] Starting ${action.params.minutes} minute timer`);
+					setCurrentSection("productivity");
+				}
+				break;
+
+			case "generate_self_improve":
+				// Self-improve activities will be available on that page
+				console.log("[App] Triggering self-improve generation");
+				setCurrentSection("self-improve");
+				break;
+
+			case "update_preferences":
+				// Context service handles this automatically
+				console.log("[App] Preferences updated via context service");
+				break;
+
+			case "refresh_activities":
+				// Force re-render of current section
+				console.log("[App] Refreshing activities");
+				break;
+
+			default:
+				console.log(`[App] Unknown action type: ${action.type}`);
+		}
+	};
+
 	const renderSection = () => {
 		switch (currentSection) {
 			case "home":
 				return (
 					<Home
 						xpPoints={xpPoints}
-						onNavigate={setCurrentSection}
+						onNavigate={handleVoiceNavigation}
 						onVoiceAssistant={() => setIsVoiceAssistantActive(true)}
 					/>
 				);
@@ -105,7 +150,7 @@ export default function App() {
 				return (
 					<Home
 						xpPoints={xpPoints}
-						onNavigate={setCurrentSection}
+						onNavigate={handleVoiceNavigation}
 						onVoiceAssistant={() => setIsVoiceAssistantActive(true)}
 					/>
 				);
@@ -127,6 +172,8 @@ export default function App() {
 				<VoiceAssistant
 					isActive={isVoiceAssistantActive}
 					onClose={() => setIsVoiceAssistantActive(false)}
+					onNavigate={handleVoiceNavigation}
+					onExecuteAction={executeVoiceAction}
 				/>
 				<Toaster />
 			</div>
