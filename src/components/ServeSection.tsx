@@ -318,10 +318,17 @@ export function ServeSection({
 						className="flex items-center justify-center"
 						style={{ height: "calc(100vh - 110px)", marginTop: "-110px" }}>
 						<div className="text-center">
-							<RefreshCw
-								className="w-8 h-8 animate-spin mx-auto mb-2"
-								style={{ color: "#405169" }}
-							/>
+							<div className="flex gap-2 justify-center mb-4">
+								{[...Array(3)].map((_, i) => (
+									<div
+										key={i}
+										className="w-3 h-3 rounded-full"
+										style={{
+											backgroundColor: "#405169",
+											animation: `dot-bounce 1.4s infinite ${i * 0.16}s`,
+										}}></div>
+								))}
+							</div>
 							<p
 								style={{
 									fontFamily: "Cooper Black, Cooper Std, serif",
@@ -329,6 +336,18 @@ export function ServeSection({
 								}}>
 								Loading activities...
 							</p>
+							<style>{`
+							@keyframes dot-bounce {
+								0%, 60%, 100% {
+									transform: translateY(0);
+									opacity: 0.7;
+								}
+								30% {
+									transform: translateY(-10px);
+									opacity: 1;
+								}
+							}
+						`}</style>
 						</div>
 					</div>
 				) : (
