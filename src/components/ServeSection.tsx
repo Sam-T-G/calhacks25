@@ -260,22 +260,6 @@ export function ServeSection({
 						</p>
 					</div>
 
-					<Button
-						variant="ghost"
-						onClick={handleRegenerate}
-						disabled={isRegenerating}
-						className="hover:bg-white/20 transition-opacity"
-						style={{
-							color: "#405169",
-							fontFamily: "Cooper Black, Cooper Std, serif",
-							fontWeight: 700,
-						}}>
-						<RefreshCw
-							className={`w-4 h-4 mr-1 ${isRegenerating ? "animate-spin" : ""}`}
-						/>
-						{isRegenerating ? "Refreshing..." : "Refresh"}
-					</Button>
-
 					<AlertDialog>
 						<AlertDialogTrigger asChild>
 							<button className="cursor-pointer hover:opacity-80 transition-opacity">
@@ -324,41 +308,6 @@ export function ServeSection({
 					</AlertDialog>
 				</div>
 			</div>
-
-			{/* Regenerating Overlay */}
-			{isRegenerating && (
-				<div
-					className="fixed inset-0 z-40 flex items-center justify-center"
-					style={{
-						backgroundColor: "rgba(232, 220, 147, 0.9)",
-						backdropFilter: "blur(2px)",
-					}}>
-					<div className="flex flex-col items-center gap-4">
-						<div
-							className="w-12 h-12 border-4 rounded-full animate-spin"
-							style={{
-								borderColor: "#405169 #405169 transparent #405169",
-								borderStyle: "solid",
-								animation: "spin 0.8s linear infinite",
-							}}></div>
-						<p
-							style={{
-								fontFamily: "Cooper Black, Cooper Std, serif",
-								color: "#405169",
-								fontSize: "18px",
-								fontWeight: 900,
-							}}>
-							Refreshing...
-						</p>
-					</div>
-					<style>{`
-						@keyframes spin {
-							0% { transform: rotate(0deg); }
-							100% { transform: rotate(360deg); }
-						}
-					`}</style>
-				</div>
-			)}
 
 			{/* Content with top padding for fixed header */}
 			<div
@@ -903,8 +852,8 @@ export function ServeSection({
 					</Tabs>
 				)}
 
-				{/* Pull to Refresh Indicator */}
-				{isPulling && (
+				{/* Pull to Refresh Indicator / Refresh Button */}
+				{isPulling ? (
 					<div
 						className="fixed bottom-0 left-0 right-0 flex justify-center py-4 transition-opacity"
 						style={{
@@ -932,6 +881,61 @@ export function ServeSection({
 									: "Pull up to refresh"}
 							</span>
 						</div>
+					</div>
+				) : isRegenerating ? (
+					<div
+						className="fixed bottom-0 left-0 right-0 flex justify-center py-4"
+						style={{
+							backgroundColor: "#E8DC93",
+							boxShadow: "0 -2px 8px rgba(0,0,0,0.1)",
+						}}>
+						<div className="flex items-center gap-3">
+							<div
+								className="w-8 h-8 rounded-full"
+								style={{
+									borderTop: "4px solid transparent",
+									borderRight: "4px solid #405169",
+									borderBottom: "4px solid #405169",
+									borderLeft: "4px solid #405169",
+									animation: "spin 0.8s linear infinite",
+								}}></div>
+							<span
+								style={{
+									fontFamily: "Cooper Black, Cooper Std, serif",
+									fontWeight: 700,
+									color: "#405169",
+									fontSize: "16px",
+								}}>
+								Refreshing...
+							</span>
+						</div>
+						<style>{`
+							@keyframes spin {
+								0% { transform: rotate(0deg); }
+								100% { transform: rotate(360deg); }
+							}
+						`}</style>
+					</div>
+				) : (
+					<div
+						className="fixed bottom-0 left-0 right-0 flex justify-center py-4 z-50"
+						style={{
+							backgroundColor: "#E8DC93",
+							boxShadow: "0 -2px 8px rgba(0,0,0,0.1)",
+						}}>
+						<Button
+							variant="ghost"
+							onClick={handleRegenerate}
+							className="hover:bg-white/30 transition-all rounded-full px-6 py-2"
+							style={{
+								color: "#405169",
+								fontFamily: "Cooper Black, Cooper Std, serif",
+								fontWeight: 700,
+								fontSize: "16px",
+							}}>
+							<RefreshCw className="w-5 h-5 mr-2" />
+							Refresh Activities
+						</Button>
 					</div>
 				)}
 			</div>
