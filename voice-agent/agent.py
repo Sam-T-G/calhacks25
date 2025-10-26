@@ -129,7 +129,7 @@ class Assistant(Agent):
             return None
     
     async def send_command_to_frontend(self, commands: dict):
-        """Send orchestration commands to frontend via data channel"""
+        """Send orchestration commands to frontend via BOTH data channel AND text message"""
         if not self.room:
             logger.warning("No room available to send commands")
             return
@@ -141,15 +141,32 @@ class Assistant(Agent):
         try:
             logger.info(f"[Agent] Preparing to send commands: {commands.get('intent', 'unknown')}")
             
-            # Encode commands as JSON and send via data channel
-            data_packet = json.dumps(commands).encode('utf-8')
-            logger.info(f"[Agent] Encoded data packet: {len(data_packet)} bytes")
+            # Method 1: Send via data channel
+            try:
+                data_packet = json.dumps(commands).encode('utf-8')
+                logger.info(f"[Agent] Encoded data packet: {len(data_packet)} bytes")
+                
+                await self.room.local_participant.publish_data(
+                    data_packet,
+                    reliable=True
+                )
+                logger.info(f"[Agent] Successfully sent commands via data channel")
+            except Exception as e:
+                logger.warning(f"[Agent] Data channel failed: {e}")
             
-            await self.room.local_participant.publish_data(
-                data_packet,
-                reliable=True
-            )
-            logger.info(f"[Agent] Successfully sent commands to frontend: {commands.get('intent', 'unknown')}")
+            # Method 2: Also send as text message for fallback
+            try:
+                nav_command = f"DOGOOD_NAV_{commands.get('navigation', {}).get('page', 'home')}"
+                await self.room.local_participant.send_text(nav_command)
+                logger.info(f"[Agent] Sent navigation via text: {nav_command}")
+                
+                # Send full JSON as another text message
+                json_cmd = json.dumps(commands)
+                await self.room.local_participant.send_text(f"DOGOOD_CMD_{json_cmd}")
+                logger.info(f"[Agent] Sent full command via text")
+            except Exception as e:
+                logger.error(f"[Agent] Text message failed: {e}")
+                
         except Exception as e:
             logger.error(f"[Agent] Failed to send commands to frontend: {e}")
             import traceback

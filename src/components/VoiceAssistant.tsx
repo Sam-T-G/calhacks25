@@ -276,14 +276,14 @@ function VoiceAssistantContent({
 	const { state, audioTrack } = useVoiceAssistant();
 	const room = useRoomContext();
 
-	// Listen for data messages from voice agent using correct RoomEvent enum
+	// Listen for data messages from voice agent - check both data channel and room events
 	useEffect(() => {
 		if (!room) {
 			console.log("[VoiceAssistant] No room available yet");
 			return;
 		}
 
-		console.log("[VoiceAssistant] Setting up data listener");
+		console.log("[VoiceAssistant] Setting up listeners");
 
 		const handleData = (
 			payload: Uint8Array,
@@ -298,11 +298,23 @@ function VoiceAssistantContent({
 			onClaudeCommand(payload);
 		};
 
+		// Listen to room for all events to catch any communication
+		const handleRoomEvent = (event: any) => {
+			console.log("[VoiceAssistant] Room event:", event);
+		};
+
 		room.on(RoomEvent.DataReceived, handleData);
-		console.log("[VoiceAssistant] Data listener registered");
+		room.on(RoomEvent.ParticipantConnected, () => {
+			console.log("[VoiceAssistant] Participant connected");
+		});
+		room.on(RoomEvent.ConnectionStateChanged, () => {
+			console.log("[VoiceAssistant] Connection state changed:", room.state);
+		});
+
+		console.log("[VoiceAssistant] Listeners registered");
 
 		return () => {
-			console.log("[VoiceAssistant] Cleaning up data listener");
+			console.log("[VoiceAssistant] Cleaning up listeners");
 			room.off(RoomEvent.DataReceived, handleData);
 		};
 	}, [room, onClaudeCommand]);
