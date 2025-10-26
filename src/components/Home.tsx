@@ -1,4 +1,4 @@
-import { Hand, Target, TrendingUp, MousePointerClick, Mic } from 'lucide-react';
+import { Hand, Target, TrendingUp, MousePointerClick, Mic, ExternalLink } from 'lucide-react';
 
 interface HomeProps {
   xpPoints: number;
@@ -139,19 +139,43 @@ export function Home({ xpPoints, onNavigate, onVoiceAssistant }: HomeProps) {
           })}
         </div>
 
+        {/* Yerba Madre Button */}
+        <a
+          href="https://yerbamadre.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="rounded-full px-5 py-3 flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all active:scale-95 w-full"
+          style={{
+            backgroundColor: '#6B8E23',
+            boxShadow: '0 4px 6px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.1)'
+          }}
+        >
+          <ExternalLink className="w-5 h-5 text-white" strokeWidth={2} />
+          <span
+            className="text-white text-[14px] text-center"
+            style={{
+              fontFamily: 'Cooper Black, Cooper Std, serif',
+              fontWeight: 700,
+              letterSpacing: '0.3px'
+            }}
+          >
+            visit Yerba Madre
+          </span>
+        </a>
+
         {/* Voice Assistant Trigger */}
-        <button 
+        <button
           onClick={onVoiceAssistant}
-          className="rounded-full px-5 py-3 flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all active:scale-95 w-full mt-10"
-          style={{ 
+          className="rounded-full px-5 py-3 flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all active:scale-95 w-full mt-6"
+          style={{
             backgroundColor: '#405169',
             boxShadow: '0 4px 6px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.1)'
           }}
         >
           <Mic className="w-5 h-5 text-white" strokeWidth={2} />
-          <span 
-            className="text-white text-[14px] text-center" 
-            style={{ 
+          <span
+            className="text-white text-[14px] text-center"
+            style={{
               fontFamily: 'Cooper Black, Cooper Std, serif',
               fontWeight: 700,
               letterSpacing: '0.3px'
