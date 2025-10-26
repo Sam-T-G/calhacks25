@@ -260,6 +260,22 @@ export function ServeSection({
 						</p>
 					</div>
 
+					<Button
+						variant="ghost"
+						onClick={handleRegenerate}
+						disabled={isRegenerating}
+						className="hover:bg-white/20 transition-opacity"
+						style={{
+							color: "#405169",
+							fontFamily: "Cooper Black, Cooper Std, serif",
+							fontWeight: 700,
+						}}>
+						<RefreshCw
+							className={`w-4 h-4 mr-1 ${isRegenerating ? "animate-spin" : ""}`}
+						/>
+						{isRegenerating ? "Refreshing..." : "Refresh"}
+					</Button>
+
 					<AlertDialog>
 						<AlertDialogTrigger asChild>
 							<button className="cursor-pointer hover:opacity-80 transition-opacity">
@@ -308,6 +324,41 @@ export function ServeSection({
 					</AlertDialog>
 				</div>
 			</div>
+
+			{/* Regenerating Overlay */}
+			{isRegenerating && (
+				<div
+					className="fixed inset-0 z-40 flex items-center justify-center"
+					style={{
+						backgroundColor: "rgba(232, 220, 147, 0.9)",
+						backdropFilter: "blur(2px)",
+					}}>
+					<div className="flex flex-col items-center gap-4">
+						<div
+							className="w-12 h-12 border-4 rounded-full animate-spin"
+							style={{
+								borderColor: "#405169 #405169 transparent #405169",
+								borderStyle: "solid",
+								animation: "spin 0.8s linear infinite",
+							}}></div>
+						<p
+							style={{
+								fontFamily: "Cooper Black, Cooper Std, serif",
+								color: "#405169",
+								fontSize: "18px",
+								fontWeight: 900,
+							}}>
+							Refreshing...
+						</p>
+					</div>
+					<style>{`
+						@keyframes spin {
+							0% { transform: rotate(0deg); }
+							100% { transform: rotate(360deg); }
+						}
+					`}</style>
+				</div>
+			)}
 
 			{/* Content with top padding for fixed header */}
 			<div
