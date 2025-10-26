@@ -2,11 +2,31 @@
 
 This is a code bundle for DoGood App Features. The original project is available at https://www.figma.com/design/6sOViGx6ABV7U0aTZF4G6b/DoGood-App-Features.
 
+## Project Structure
+
+```
+calhacks25/
+├── src/               # React frontend application
+├── api/               # Vercel serverless functions
+├── voice-agent/       # LiveKit voice agent (Python)
+└── ...
+```
+
 ## Setup
 
 ### 1. Install Dependencies
 
-Run `npm i` to install the dependencies.
+**Frontend:**
+```bash
+npm i
+```
+
+**Voice Agent:**
+```bash
+cd voice-agent
+uv sync
+cd ..
+```
 
 ### 2. Claude API - ⚠️ **Important: Requires Backend**
 
@@ -40,9 +60,44 @@ To use real Claude API:
 
 **Current Status:** App uses mock data (works perfectly!). Deploy to enable live Claude AI.
 
+### 3. LiveKit Voice Agent Setup
+
+The "DoGood Companion" voice assistant requires LiveKit configuration:
+
+1. **Copy environment variables:**
+   ```bash
+   cp .env.example .env.local
+   ```
+
+2. **Add your LiveKit credentials to `.env.local`:**
+   ```
+   LIVEKIT_API_KEY=your_api_key
+   LIVEKIT_API_SECRET=your_api_secret
+   LIVEKIT_URL=wss://your-project.livekit.cloud
+   ```
+
+3. **Configure the voice agent:**
+   ```bash
+   cd voice-agent
+   # Update .env.local with same LiveKit credentials
+   ```
+
+4. **See `voice-agent/SETUP.md` for detailed voice agent setup**
+
 ## Running the code
 
-Run `npm run dev` to start the development server.
+**Frontend:**
+```bash
+npm run dev
+```
+
+**Voice Agent (in a separate terminal):**
+```bash
+cd voice-agent
+uv run agent.py start
+```
+
+The frontend will be available at `http://localhost:3000`.
 
 ## Features
 
@@ -60,3 +115,12 @@ Run `npm run dev` to start the development server.
 - Verification (currently in demo mode)
 - Receive XP points for completed tasks
 - ℹ️ **Requires backend for AI verification** (see CORS_SOLUTION.md)
+
+### Voice Assistant (DoGood Companion)
+
+- Click "Speak with DoGood Companion" to start a voice conversation
+- Real-time audio interaction with AI assistant
+- Visual feedback showing listening/thinking/speaking states
+- Click "End Conversation" to close the assistant
+- Each button press starts a fresh conversation
+- ℹ️ **Requires LiveKit setup and running voice agent** (see voice-agent/SETUP.md)
