@@ -217,17 +217,29 @@ function buildGenerationPrompt(preferences) {
 		}
 	}
 
-	return `You are a creative activity generator for a gamified volunteering app. Generate RANDOM, DIVERSE, and UNIQUE community service activities every time.
+	return `You are a creative activity generator for a gamified volunteering app. Generate LOCALLY RELEVANT, CULTURALLY APPROPRIATE, and ENVIRONMENTALLY SENSITIVE activities for the user's specific location.
+
+${
+	preferencesText?.includes("Location:")
+		? `USER'S CURRENT LOCATION: ${preferences.location}
+
+CRITICAL REQUIREMENTS:
+- Generate activities specific to THIS user's location (${preferences.location})
+- Use REAL local landmarks, neighborhoods, and area names
+- Incorporate culturally relevant issues, events, or needs for this region
+- Consider local environmental concerns (coastal areas → beach cleanup, urban areas → city gardens, rural areas → agricultural volunteering)
+- Use culturally appropriate language and community-appropriate activities
+- Reference real local organizations, parks, or community centers when possible`
+		: "User context:\n" + preferencesText ||
+		  "No specific preferences - be diverse and creative."
+}
 
 IMPORTANT:
 - Make each set of activities DIFFERENT from previous generations
-- Use random, creative titles and locations
+- Use REAL local landmarks and neighborhood names
 - Vary XP amounts, durations, and dates
 - Include mix of single-step and multi-step activities
-- Be creative with the activity ideas
-
-User context:
-${preferencesText || "No specific preferences - be diverse and creative."}
+- Be culturally and environmentally relevant to the area
 
 Please generate activities in the following JSON format:
 
@@ -280,10 +292,15 @@ Please generate activities in the following JSON format:
 }
 \`\`\`
 
+LOCATION-BASED REQUIREMENTS (if user location provided):
+- Use REAL neighborhoods, parks, and landmarks near the user's location
+- Generate activities that address LOCAL issues and concerns
+- Consider local cultural events, holidays, or community needs
+- Use culturally appropriate references and community terminology
+
 RANDOMIZATION REQUIREMENTS:
 - Vary ALL aspects: locations, titles, dates, times, XP amounts, durations
 - Pick DIFFERENT activities each time (mix donation drives, cleanup events, tutoring, food banks, workshops, etc.)
-- Use RANDOM neighborhoods and locations (different each generation)
 - Include diverse causes: environment, education, hunger, homelessness, animal welfare, community, etc.
 - Mix high and low XP activities
 - Vary between single and multi-step activities randomly
@@ -295,7 +312,7 @@ Quantities:
 - Generate 3 mini-games (environmental, social, educational themes)
 
 Quality:
-- Use realistic, RANDOM locations and times
+- Use realistic local locations when user location is known
 - Make dates within the next week (vary them)
 - XP should reflect time/effort (100-400 for opportunities, 150-400 for alerts, 40-100 for games)
 - Make multi-step activities have totalRequired between 5-50

@@ -23,6 +23,36 @@ export default function App() {
 	const [xpPoints, setXpPoints] = useState(2450);
 	const [isVoiceAssistantActive, setIsVoiceAssistantActive] = useState(false);
 
+	// Request location permission on mount
+	useEffect(() => {
+		if ("geolocation" in navigator) {
+			navigator.geolocation.getCurrentPosition(
+				(position) => {
+					const location = {
+						latitude: position.coords.latitude,
+						longitude: position.coords.longitude,
+					};
+					// Store in context service
+					contextService.updatePreferences({
+						location: `${location.latitude}, ${location.longitude}`,
+					});
+					console.log("[App] Location obtained:", location);
+				},
+				(error) => {
+					console.warn(
+						"[App] Location permission denied or error:",
+						error.message
+					);
+				},
+				{
+					enableHighAccuracy: false,
+					timeout: 5000,
+					maximumAge: 60000, // Cache for 1 minute
+				}
+			);
+		}
+	}, []);
+
 	// Track page navigation
 	useEffect(() => {
 		const pageName =
