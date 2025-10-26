@@ -217,16 +217,15 @@ export function VoiceAssistant({
 
 	return (
 		<>
-			{/* Compact floating voice module - persistent across navigation */}
 			<div
-				className="fixed bottom-4 right-4 z-50"
-				style={{ pointerEvents: "all" }}>
+				className="fixed inset-0 z-50 flex items-center justify-center"
+				style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
 				<div
 					className="rounded-2xl p-4 shadow-2xl"
 					style={{
 						backgroundColor: "#405169",
-						width: "280px",
-						maxHeight: "200px",
+						minWidth: "320px",
+						maxWidth: "400px",
 					}}>
 					{/* Vintage Paper Texture Overlay */}
 					<div
@@ -243,7 +242,7 @@ export function VoiceAssistant({
 							style={{
 								fontFamily: "Cooper Black, Cooper Std, serif",
 								fontWeight: 900,
-								fontSize: "14px",
+								fontSize: "16px",
 							}}>
 							DoGood Companion
 						</h3>
@@ -314,7 +313,7 @@ function VoiceAssistantContent({
 			<RoomAudioRenderer />
 
 			{/* Compact Audio Visualizer */}
-			<div className="w-full flex justify-center" style={{ height: "40px" }}>
+			<div className="w-full flex justify-center" style={{ height: "32px" }}>
 				{audioTrack && (
 					<BarVisualizer
 						state={state}
@@ -324,14 +323,14 @@ function VoiceAssistantContent({
 					/>
 				)}
 				{!audioTrack && (
-					<div className="flex items-center gap-1">
+					<div className="flex items-center gap-1.5">
 						{[...Array(5)].map((_, i) => (
 							<div
 								key={i}
 								className="w-1.5 rounded-full"
 								style={{
 									backgroundColor: "#E8DC93",
-									height: state === "listening" ? "20px" : "8px",
+									height: state === "listening" ? "24px" : "12px",
 									animation:
 										state === "listening"
 											? `wave 0.6s ease-in-out infinite ${i * 0.1}s`
@@ -361,13 +360,13 @@ function VoiceAssistantContent({
 			{/* Compact End Button */}
 			<button
 				onClick={onEndConvo}
-				className="rounded-full px-3 py-1 flex items-center justify-center gap-1 shadow-md hover:shadow-lg transition-all active:scale-95"
+				className="rounded-full px-4 py-1 flex items-center justify-center gap-1 shadow-md hover:shadow-lg transition-all active:scale-95"
 				style={{
 					backgroundColor: "#9D5C45",
 					fontFamily: "Cooper Black, Cooper Std, serif",
 					fontWeight: 700,
 					color: "white",
-					fontSize: "11px",
+					fontSize: "12px",
 					letterSpacing: "0.2px",
 				}}>
 				End
@@ -375,8 +374,8 @@ function VoiceAssistantContent({
 
 			<style>{`
         @keyframes wave {
-          0%, 100% { height: 8px; }
-          50% { height: 20px; }
+          0%, 100% { height: 12px; }
+          50% { height: 24px; }
         }
         .voice-assistant-visualizer {
           width: 100%;
