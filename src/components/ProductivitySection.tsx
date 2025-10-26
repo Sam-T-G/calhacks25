@@ -16,6 +16,7 @@ import {
 import { toast } from "sonner@2.0.3";
 import { Badge } from "./ui/badge";
 import { PhotoVerification } from "./PhotoVerification";
+import dgLogo from "../assets/images/dglogo.png";
 
 interface ProductivitySectionProps {
 	onBack: () => void;
@@ -205,18 +206,25 @@ export function ProductivitySection({
 			/>
 
 			<div className="relative z-10 max-w-4xl mx-auto">
-				<Button
-					variant="ghost"
-					onClick={onBack}
-					className="mb-4 -ml-2 hover:bg-white/20"
-					style={{
-						color: "#405169",
-						fontFamily: "Cooper Black, Cooper Std, serif",
-						fontWeight: 700,
-					}}>
-					<ArrowLeft className="w-4 h-4 mr-2" />
-					Back
-				</Button>
+				<div className="flex items-center justify-between mb-6">
+					<Button
+						variant="ghost"
+						onClick={onBack}
+						className="-ml-2 hover:bg-white/20"
+						style={{
+							color: "#405169",
+							fontFamily: "Cooper Black, Cooper Std, serif",
+							fontWeight: 700,
+						}}>
+						<ArrowLeft className="w-4 h-4 mr-2" />
+						Back
+					</Button>
+					<img
+						src={dgLogo}
+						alt="DoGood Logo"
+						className="h-12 w-auto drop-shadow-md"
+					/>
+				</div>
 
 				<div className="mb-6">
 					<h1
@@ -292,7 +300,7 @@ export function ProductivitySection({
 					{/* Timer Display - Top */}
 					<div className="text-center mb-8">
 						<div
-							className="text-7xl mb-4 tracking-tight"
+							className="text-9xl mb-4 tracking-tight"
 							style={{
 								fontFamily: "Cooper Black, Cooper Std, serif",
 								fontWeight: 900,
@@ -305,21 +313,12 @@ export function ProductivitySection({
 							className="w-full rounded-full h-3 overflow-hidden"
 							style={{ backgroundColor: "#E8DC93" }}>
 							<div
-								className="h-3 rounded-full transition-all duration-1000 relative overflow-hidden"
+								className="h-3 rounded-full transition-all duration-1000"
 								style={{
 									width: `${progress}%`,
-									background:
-										"linear-gradient(90deg, #3B3766 0%, #4A5A3C 100%)",
-								}}>
-								<div
-									className="absolute inset-0 opacity-20"
-									style={{
-										background:
-											"repeating-linear-gradient(90deg, transparent, transparent 10px, rgba(255,255,255,0.3) 10px, rgba(255,255,255,0.3) 20px)",
-										animation: "shimmer 2s linear infinite",
-									}}
-								/>
-							</div>
+									backgroundColor: "#3B3766",
+								}}
+							/>
 						</div>
 					</div>
 
@@ -443,9 +442,9 @@ export function ProductivitySection({
 					<div className="flex gap-3">
 						<Button
 							onClick={handleStartTimer}
-							className="h-14 flex-1 border-0 rounded-xl text-base shadow-lg hover:shadow-xl transition-all hover:scale-105"
+							className="h-14 flex-1 border-0 rounded-xl text-base"
 							style={{
-								background: "linear-gradient(135deg, #3B3766 0%, #4A5A3C 100%)",
+								backgroundColor: "#3B3766",
 								fontFamily: "Cooper Black, Cooper Std, serif",
 								fontWeight: 700,
 							}}>
@@ -463,7 +462,7 @@ export function ProductivitySection({
 						</Button>
 						<Button
 							onClick={handleReset}
-							className="h-14 px-6 rounded-xl border-2 shadow-lg hover:shadow-xl transition-all hover:scale-105"
+							className="h-14 px-6 rounded-xl border-2"
 							style={{
 								borderColor: "#C4B77D",
 								backgroundColor: "#FFFFFF",
@@ -474,13 +473,6 @@ export function ProductivitySection({
 							<RotateCcw className="w-5 h-5" />
 						</Button>
 					</div>
-
-					<style>{`
-            @keyframes shimmer {
-              0% { transform: translateX(-100%); }
-              100% { transform: translateX(100%); }
-            }
-          `}</style>
 				</Card>
 
 				{/* Suggested Tasks */}

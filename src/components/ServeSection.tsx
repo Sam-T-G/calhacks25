@@ -16,6 +16,7 @@ import { Badge } from "./ui/badge";
 import { PhotoVerification } from "./PhotoVerification";
 import { claudeService } from "../services/claudeService";
 import { ServeActivities, UserPreferences } from "../types/serve";
+import dgLogo from "../assets/images/dglogo.png";
 
 interface ServeSectionProps {
 	onBack: () => void;
@@ -139,18 +140,25 @@ export function ServeSection({
 			/>
 
 			<div className="relative z-10 max-w-4xl mx-auto">
-				<Button
-					variant="ghost"
-					onClick={onBack}
-					className="mb-4 -ml-2 hover:bg-white/20"
-					style={{
-						color: "#405169",
-						fontFamily: "Cooper Black, Cooper Std, serif",
-						fontWeight: 700,
-					}}>
-					<ArrowLeft className="w-4 h-4 mr-2" />
-					Back
-				</Button>
+				<div className="flex items-center justify-between mb-6">
+					<Button
+						variant="ghost"
+						onClick={onBack}
+						className="-ml-2 hover:bg-white/20"
+						style={{
+							color: "#405169",
+							fontFamily: "Cooper Black, Cooper Std, serif",
+							fontWeight: 700,
+						}}>
+						<ArrowLeft className="w-4 h-4 mr-2" />
+						Back
+					</Button>
+					<img
+						src={dgLogo}
+						alt="DoGood Logo"
+						className="h-12 w-auto drop-shadow-md"
+					/>
+				</div>
 
 				<div className="mb-6 flex justify-between items-start">
 					<div>
