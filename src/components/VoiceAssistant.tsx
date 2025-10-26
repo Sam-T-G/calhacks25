@@ -32,19 +32,43 @@ export function VoiceAssistant({
 
 	// Handle Claude orchestration commands from voice agent
 	const handleClaudeCommand = useCallback(
-		(payload: Uint8Array) => {
+		(payload: Uint8Array | string) => {
 			try {
-				const data = JSON.parse(new TextDecoder().decode(payload));
-				console.log("[VoiceAssistant] Received Claude command:", data);
+				console.log(
+					"[VoiceAssistant] handleClaudeCommand called with:",
+					typeof payload,
+					payload
+				);
+
+				// Handle both Uint8Array and string payloads
+				let jsonStr: string;
+				if (typeof payload === "string") {
+					jsonStr = payload;
+				} else {
+					jsonStr = new TextDecoder().decode(payload);
+				}
+
+				console.log("[VoiceAssistant] Decoded JSON string:", jsonStr);
+				const data = JSON.parse(jsonStr);
+				console.log("[VoiceAssistant] Parsed command data:", data);
 
 				// Log orchestration event
 				contextService.logOrchestration(data.intent || "unknown", data);
 
-				// Execute navigation
-				if (data.navigation && onNavigate) {
+				// Execute navigation FIRST
+				if (data.navigation && data.navigation.page) {
 					const page = data.navigation.page as Section;
-					console.log("[VoiceAssistant] Navigating to:", page);
-					onNavigate(page);
+					console.log("[VoiceAssistant] ⚡ NAVIGATING to:", page);
+					if (onNavigate) {
+						onNavigate(page);
+					} else {
+						console.error("[VoiceAssistant] onNavigate is null!");
+					}
+				} else {
+					console.log(
+						"[VoiceAssistant] No navigation in command:",
+						data.navigation
+					);
 				}
 
 				// Execute actions
@@ -80,6 +104,7 @@ export function VoiceAssistant({
 				}
 			} catch (err) {
 				console.error("[VoiceAssistant] Failed to parse Claude command:", err);
+				console.error("[VoiceAssistant] Error details:", err);
 			}
 		},
 		[onNavigate, onExecuteAction]
@@ -290,12 +315,24 @@ function VoiceAssistantContent({
 			participant?: any,
 			kind?: number
 		) => {
-			console.log("[VoiceAssistant] Data received!", {
+			console.log("[VoiceAssistant] 📨 Data channel received!", {
 				payloadLength: payload.length,
+				payloadPreview: Array.from(payload.slice(0, 20)),
 				participant: participant?.identity,
 				kind,
 			});
 			onClaudeCommand(payload);
+		};
+
+		// Also listen for participant chat messages
+		const handleChatMessage = (message: string, participant: any) => {
+			console.log(
+				"[VoiceAssistant] 💬 Chat message received:",
+				message,
+				"from",
+				participant?.identity
+			);
+			onClaudeCommand(message);
 		};
 
 		// Listen to room for all events to catch any communication
@@ -304,14 +341,26 @@ function VoiceAssistantContent({
 		};
 
 		room.on(RoomEvent.DataReceived, handleData);
+
+		// Listen for all room events to debug
 		room.on(RoomEvent.ParticipantConnected, () => {
-			console.log("[VoiceAssistant] Participant connected");
+			console.log("[VoiceAssistant] ✅ Participant connected");
 		});
 		room.on(RoomEvent.ConnectionStateChanged, () => {
-			console.log("[VoiceAssistant] Connection state changed:", room.state);
+			console.log("[VoiceAssistant] 🔄 Connection state:", room.state);
 		});
 
-		console.log("[VoiceAssistant] Listeners registered");
+		// Log current room state
+		console.log("[VoiceAssistant] Room state on mount:", room.state);
+		console.log(
+			"[VoiceAssistant] Remote participants:",
+			room.remoteParticipants.size
+		);
+		console.log(
+			"[VoiceAssistant] Local participant:",
+			room.localParticipant?.identity
+		);
+		console.log("[VoiceAssistant] 📡 Listeners registered");
 
 		return () => {
 			console.log("[VoiceAssistant] Cleaning up listeners");
