@@ -928,15 +928,17 @@ export function ServeSection({
 				{/* Refresh Button at Bottom of Content */}
 				<div className="flex justify-center py-6 pb-12 mt-12">
 					{isRegenerating && !isLoading ? (
-						<div
-							className="w-10 h-10 rounded-full"
-							style={{
-								borderTop: "4px solid transparent",
-								borderRight: "4px solid #405169",
-								borderBottom: "4px solid transparent",
-								borderLeft: "4px solid #405169",
-								animation: "spin 0.8s linear infinite",
-							}}></div>
+						<div className="flex gap-2">
+							{[...Array(3)].map((_, i) => (
+								<div
+									key={i}
+									className="w-3 h-3 rounded-full"
+									style={{
+										backgroundColor: "#405169",
+										animation: `dot-bounce 1.4s infinite ${i * 0.16}s`,
+									}}></div>
+							))}
+						</div>
 					) : !isLoading ? (
 						<Button
 							variant="ghost"
@@ -954,11 +956,17 @@ export function ServeSection({
 					) : null}
 				</div>
 				<style>{`
-					@keyframes spin {
-						0% { transform: rotate(0deg); }
-						100% { transform: rotate(360deg); }
+				@keyframes dot-bounce {
+					0%, 60%, 100% {
+						transform: translateY(0);
+						opacity: 0.7;
 					}
-				`}</style>
+					30% {
+						transform: translateY(-10px);
+						opacity: 1;
+					}
+				}
+			`}</style>
 			</div>
 		</div>
 	);
