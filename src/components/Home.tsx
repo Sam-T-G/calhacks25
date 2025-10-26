@@ -215,8 +215,8 @@ export function Home({ xpPoints, onNavigate, onVoiceAssistant }: HomeProps) {
       {showContextDebug && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div
-            className="rounded-3xl p-6 shadow-2xl max-w-2xl max-h-[80vh] overflow-auto w-full"
-            style={{ backgroundColor: '#405169' }}
+            className="rounded-3xl p-6 shadow-2xl max-w-2xl w-full flex flex-col"
+            style={{ backgroundColor: '#405169', maxHeight: '80vh' }}
           >
             <div className="flex items-center justify-between mb-4">
               <h3
@@ -236,61 +236,69 @@ export function Home({ xpPoints, onNavigate, onVoiceAssistant }: HomeProps) {
               </button>
             </div>
 
-            {/* Full Context Object */}
-            <div className="mb-4">
-              <h4
-                className="text-white text-[14px] mb-2"
-                style={{
-                  fontFamily: 'Cooper Black, Cooper Std, serif',
-                  fontWeight: 700
-                }}
-              >
-                Full Context Object:
-              </h4>
-              <pre
-                className="bg-black/30 text-white p-4 rounded-lg text-xs overflow-auto max-h-64"
-                style={{ fontFamily: 'monospace' }}
-              >
-                {JSON.stringify(contextService.getContext(), null, 2)}
-              </pre>
-            </div>
+            <div className="overflow-y-auto flex-1 pr-2">
+              {/* Full Context Object */}
+              <div className="mb-4">
+                <h4
+                  className="text-white text-[14px] mb-2 sticky top-0"
+                  style={{
+                    fontFamily: 'Cooper Black, Cooper Std, serif',
+                    fontWeight: 700,
+                    backgroundColor: '#405169',
+                    paddingBottom: '0.5rem'
+                  }}
+                >
+                  Full Context Object:
+                </h4>
+                <pre
+                  className="bg-black/30 text-white p-4 rounded-lg text-xs overflow-x-auto"
+                  style={{ fontFamily: 'monospace' }}
+                >
+                  {JSON.stringify(contextService.getContext(), null, 2)}
+                </pre>
+              </div>
 
-            {/* LLM Formatted Context */}
-            <div className="mb-4">
-              <h4
-                className="text-white text-[14px] mb-2"
-                style={{
-                  fontFamily: 'Cooper Black, Cooper Std, serif',
-                  fontWeight: 700
-                }}
-              >
-                LLM Formatted (for Claude):
-              </h4>
-              <pre
-                className="bg-black/30 text-white p-4 rounded-lg text-xs overflow-auto max-h-64 whitespace-pre-wrap"
-                style={{ fontFamily: 'monospace' }}
-              >
-                {contextService.getContextForLLM()}
-              </pre>
-            </div>
+              {/* LLM Formatted Context */}
+              <div className="mb-4">
+                <h4
+                  className="text-white text-[14px] mb-2 sticky top-0"
+                  style={{
+                    fontFamily: 'Cooper Black, Cooper Std, serif',
+                    fontWeight: 700,
+                    backgroundColor: '#405169',
+                    paddingBottom: '0.5rem'
+                  }}
+                >
+                  LLM Formatted (for Claude):
+                </h4>
+                <pre
+                  className="bg-black/30 text-white p-4 rounded-lg text-xs overflow-x-auto whitespace-pre-wrap"
+                  style={{ fontFamily: 'monospace' }}
+                >
+                  {contextService.getContextForLLM()}
+                </pre>
+              </div>
 
-            {/* Voice Agent Context */}
-            <div>
-              <h4
-                className="text-white text-[14px] mb-2"
-                style={{
-                  fontFamily: 'Cooper Black, Cooper Std, serif',
-                  fontWeight: 700
-                }}
-              >
-                Voice Agent Summary:
-              </h4>
-              <pre
-                className="bg-black/30 text-white p-4 rounded-lg text-xs overflow-auto whitespace-pre-wrap"
-                style={{ fontFamily: 'monospace' }}
-              >
-                {contextService.getContextForVoice()}
-              </pre>
+              {/* Voice Agent Context */}
+              <div>
+                <h4
+                  className="text-white text-[14px] mb-2 sticky top-0"
+                  style={{
+                    fontFamily: 'Cooper Black, Cooper Std, serif',
+                    fontWeight: 700,
+                    backgroundColor: '#405169',
+                    paddingBottom: '0.5rem'
+                  }}
+                >
+                  Voice Agent Summary:
+                </h4>
+                <pre
+                  className="bg-black/30 text-white p-4 rounded-lg text-xs overflow-x-auto whitespace-pre-wrap"
+                  style={{ fontFamily: 'monospace' }}
+                >
+                  {contextService.getContextForVoice()}
+                </pre>
+              </div>
             </div>
           </div>
         </div>

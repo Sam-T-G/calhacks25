@@ -53,6 +53,9 @@ export function VoiceAssistant({ isActive, onClose }: VoiceAssistantProps) {
   };
 
   const handleDisconnect = useCallback(() => {
+    // Log the end of voice session
+    contextService.logActivity('voice_session_ended', 'Ended DoGood Companion voice session');
+
     setToken('');
     setWsUrl('');
     onClose();

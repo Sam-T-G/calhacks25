@@ -11,6 +11,7 @@ export interface PageVisit {
   page: string;
   timestamp: number;
   duration?: number; // Time spent on page in ms
+  pageContent?: string; // Scraped text content from the page
 }
 
 export interface ActivityEvent {
@@ -140,11 +141,57 @@ class ContextService {
   }
 
   /**
+   * Extract visible text content from the current page
+   */
+  private extractPageContent(): string {
+    if (typeof document === 'undefined') return '';
+
+    try {
+      // Get the main content area (avoid navigation, headers, footers)
+      const mainContent = document.querySelector('main') || document.body;
+
+      // Get all text content, clean it up
+      let content = mainContent.innerText || '';
+
+      // Clean up whitespace and limit length
+      content = content
+        .replace(/\s+/g, ' ')  // Replace multiple spaces with single space
+        .replace(/\n+/g, ' ')  // Replace newlines with spaces
+        .trim();
+
+      // Limit to 1000 characters to keep context manageable
+      if (content.length > 1000) {
+        content = content.substring(0, 1000) + '...';
+      }
+
+      return content;
+    } catch (e) {
+      console.warn('[ContextService] Failed to extract page content:', e);
+      return '';
+    }
+  }
+
+  /**
    * Track page visit
    */
   trackPageVisit(page: string): void {
     // Record duration for previous page if exists
     this.recordPageDuration();
+
+    // Extract content from the page (with a small delay to let content render)
+    setTimeout(() => {
+      const pageContent = this.extractPageContent();
+
+      // Update the visit with content if we have it
+      if (pageContent && this.context.pageVisits.length > 0) {
+        const lastVisit = this.context.pageVisits[this.context.pageVisits.length - 1];
+        if (lastVisit.page === page && !lastVisit.pageContent) {
+          lastVisit.pageContent = pageContent;
+          this.saveContext();
+          console.log(`[ContextService] Captured content for ${page}: ${pageContent.substring(0, 100)}...`);
+        }
+      }
+    }, 100);
 
     const visit: PageVisit = {
       page,
@@ -261,6 +308,9 @@ class ContextService {
         const timeAgo = this.formatTimeAgo(visit.timestamp);
         const duration = visit.duration ? ` (${Math.round(visit.duration / 1000)}s)` : '';
         contextStr += `- ${visit.page}${duration} - ${timeAgo}\n`;
+        if (visit.pageContent) {
+          contextStr += `  Content: ${visit.pageContent}\n`;
+        }
       });
       contextStr += `\n`;
     }
@@ -294,13 +344,22 @@ class ContextService {
    * Get context summary for voice agent
    */
   getContextForVoice(): string {
-    const { completedTasks, totalXP, tasksInProgress } = this.context;
+    const { completedTasks, totalXP, tasksInProgress, pageVisits } = this.context;
     const recentActivities = this.context.activities.slice(-5);
 
     let summary = `The user has earned ${totalXP} XP and completed ${completedTasks.length} tasks. `;
 
     if (tasksInProgress.length > 0) {
       summary += `They currently have ${tasksInProgress.length} task(s) in progress. `;
+    }
+
+    // Include recent page content for context
+    const recentPagesWithContent = pageVisits.slice(-3).filter(v => v.pageContent);
+    if (recentPagesWithContent.length > 0) {
+      summary += `Recent pages they've viewed: `;
+      recentPagesWithContent.forEach(visit => {
+        summary += `${visit.page} (content: ${visit.pageContent?.substring(0, 200)}), `;
+      });
     }
 
     if (recentActivities.length > 0) {
