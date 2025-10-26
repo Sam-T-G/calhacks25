@@ -434,6 +434,44 @@ class ContextService {
   }
 
   /**
+   * Sync context to MCP server for AI-powered task generation
+   */
+  async syncToMCP(): Promise<boolean> {
+    try {
+      // Use the MCP server's store_user_context tool
+      const mcpUrl = import.meta.env.VITE_MCP_SERVER_URL || 'https://calhacks25-vhcq.onrender.com/mcp';
+
+      const response = await fetch(mcpUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          method: 'tools/call',
+          params: {
+            name: 'store_user_context',
+            arguments: {
+              session_id: this.context.sessionId,
+              context_json: JSON.stringify(this.context)
+            }
+          }
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to sync context to MCP');
+      }
+
+      const result = await response.json();
+      console.log('[ContextService] Synced to MCP server:', result);
+      return true;
+    } catch (error) {
+      console.error('[ContextService] Failed to sync to MCP server:', error);
+      return false;
+    }
+  }
+
+  /**
    * Load context from backend
    */
   async loadFromBackend(sessionId: string): Promise<boolean> {

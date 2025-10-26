@@ -12,11 +12,14 @@ import {
 	Pause,
 	RotateCcw,
 	AlertCircle,
+	Sparkles,
 } from "lucide-react";
 import { toast } from "sonner@2.0.3";
 import { Badge } from "./ui/badge";
 import { PhotoVerification } from "./PhotoVerification";
 import dgLogo from "../assets/images/dglogo.png";
+import { contextService } from "../services/contextService";
+import { getAIProductivityTasks } from "../services/mcpService";
 
 interface ProductivitySectionProps {
 	onBack: () => void;
@@ -33,6 +36,9 @@ export function ProductivitySection({
 	const [customMinutes, setCustomMinutes] = useState("25");
 	const [completedTasks, setCompletedTasks] = useState<Set<string>>(new Set());
 	const [showError, setShowError] = useState(false);
+	const [isLoadingTasks, setIsLoadingTasks] = useState(false);
+	const [aiGeneratedTasks, setAiGeneratedTasks] = useState<any[]>([]);
+	const [isAIGenerated, setIsAIGenerated] = useState(false);
 
 	// Generic productive task suggestions for dropdown
 	const taskSuggestions = [
@@ -115,7 +121,37 @@ export function ProductivitySection({
 		},
 	];
 
-	const suggestedTasks = allSuggestedTasks.filter(
+	// Load AI-generated tasks on mount
+	useEffect(() => {
+		const loadAITasks = async () => {
+			setIsLoadingTasks(true);
+			try {
+				// Sync context to MCP first
+				await contextService.syncToMCP();
+
+				// Get AI-customized tasks
+				const sessionContext = contextService.getContext();
+				const result = await getAIProductivityTasks(sessionContext.sessionId);
+
+				if (result.tasks && result.tasks.length > 0) {
+					setAiGeneratedTasks(result.tasks);
+					setIsAIGenerated(result.ai_generated || false);
+					console.log("[ProductivitySection] Loaded AI tasks:", result);
+				}
+			} catch (error) {
+				console.error("[ProductivitySection] Failed to load AI tasks:", error);
+			} finally {
+				setIsLoadingTasks(false);
+			}
+		};
+
+		loadAITasks();
+	}, []);
+
+	// Use AI-generated tasks if available, otherwise fallback to default
+	const tasksToDisplay = aiGeneratedTasks.length > 0 ? aiGeneratedTasks : allSuggestedTasks;
+
+	const suggestedTasks = tasksToDisplay.filter(
 		(task) => !completedTasks.has(task.id)
 	);
 
@@ -477,7 +513,11 @@ export function ProductivitySection({
 
 				{/* Suggested Tasks */}
 				<div className="mb-4 flex items-center gap-2">
-					<Calendar className="w-5 h-5" style={{ color: "#3B3766" }} />
+					{isAIGenerated ? (
+						<Sparkles className="w-5 h-5" style={{ color: "#3B3766" }} />
+					) : (
+						<Calendar className="w-5 h-5" style={{ color: "#3B3766" }} />
+					)}
 					<h3
 						style={{
 							fontFamily: "Cooper Black, Cooper Std, serif",
@@ -485,8 +525,14 @@ export function ProductivitySection({
 							fontSize: "20px",
 							color: "#405169",
 						}}>
-						Suggested Tasks
+						{isAIGenerated ? "AI-Personalized Tasks" : "Suggested Tasks"}
 					</h3>
+					{isLoadingTasks && (
+						<div
+							className="ml-2 w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
+							style={{ borderColor: "#3B3766" }}
+						/>
+					)}
 				</div>
 				<p
 					className="mb-4 text-sm opacity-70"
@@ -494,7 +540,9 @@ export function ProductivitySection({
 						fontFamily: "Cooper Black, Cooper Std, serif",
 						color: "#405169",
 					}}>
-					Based on your calendar
+					{isAIGenerated
+						? "Customized based on your activity and context"
+						: "Based on your calendar"}
 				</p>
 
 				<div className="space-y-3">

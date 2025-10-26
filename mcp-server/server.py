@@ -1,14 +1,27 @@
 #!/usr/bin/env python3
 import os
 import httpx
+import json
 from fastmcp import FastMCP
 from typing import Optional
+from anthropic import Anthropic
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 mcp = FastMCP("DoGood MCP Server")
 
 # Poke API Configuration
 POKE_API_KEY = os.environ.get("POKE_API_KEY", "pk_kCas6XWwSAyHKdmy0Of0h9ZNyOus5WzsCu2mQyDAZQw")
 POKE_API_URL = "https://poke.com/api/v1/inbound-sms/webhook"
+
+# Claude API Configuration
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+anthropic_client = Anthropic(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
+
+# In-memory context storage (in production, use a database)
+user_contexts = {}
 
 @mcp.tool(description="Send a message to Poke - use this to send notifications, reminders, or updates about DoGood activities")
 async def send_poke_message(message: str) -> dict:
@@ -150,14 +163,107 @@ async def schedule_activity_reminder(
 
     return result
 
-@mcp.tool(description="Get personalized productivity task suggestions for the Productivity tab - tasks based on user's calendar, work patterns, and priorities")
+@mcp.tool(description="Store user context from the frontend - call this to sync context from the DoGood app")
+def store_user_context(session_id: str, context_json: str) -> dict:
+    """Store user context for AI-powered task generation"""
+    try:
+        context = json.loads(context_json)
+        user_contexts[session_id] = context
+        return {
+            "success": True,
+            "message": f"Context stored for session {session_id}",
+            "session_id": session_id
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "message": "Failed to store context"
+        }
+
+@mcp.tool(description="Get personalized productivity task suggestions using AI - tasks based on user's context, patterns, and Poke data")
 def get_productivity_tasks(
+    session_id: str = "default",
     include_work: bool = True,
     include_personal: bool = True,
-    max_tasks: int = 4
+    max_tasks: int = 4,
+    use_ai: bool = True
 ) -> dict:
-    """Get personalized productivity task suggestions for the DoGood app"""
+    """Get AI-personalized productivity task suggestions for the DoGood app"""
 
+    # Get user context if available
+    user_context = user_contexts.get(session_id, {})
+
+    # If AI is enabled and we have Claude API key and context, use AI generation
+    if use_ai and anthropic_client and user_context:
+        try:
+            # Build context string for Claude
+            context_str = f"""User Context:
+- Total XP: {user_context.get('totalXP', 0)}
+- Completed Tasks: {len(user_context.get('completedTasks', []))}
+- Tasks in Progress: {len(user_context.get('tasksInProgress', []))}
+
+Recent Activities:
+"""
+            for activity in user_context.get('activities', [])[-5:]:
+                context_str += f"- [{activity.get('type')}] {activity.get('description')}\n"
+
+            context_str += f"\nPages Visited:\n"
+            for visit in user_context.get('pageVisits', [])[-5:]:
+                context_str += f"- {visit.get('page')}\n"
+
+            # Call Claude to generate personalized tasks
+            prompt = f"""Based on the user's DoGood app context below, generate {max_tasks} personalized productivity tasks.
+Consider their activity patterns, interests, and recent behavior.
+
+{context_str}
+
+Generate tasks in this JSON format:
+{{
+    "tasks": [
+        {{
+            "id": "unique_id",
+            "title": "Task Title",
+            "lastDone": "X days ago",
+            "xp": 80,
+            "category": "Work" or "Personal",
+            "color": "#3B3766" for Work or "#4A5A3C" for Personal
+        }}
+    ]
+}}
+
+Include both work tasks (if include_work={include_work}) and personal tasks (if include_personal={include_personal}).
+Make tasks relevant to their context and encouraging. Return ONLY the JSON, no other text."""
+
+            response = anthropic_client.messages.create(
+                model="claude-3-5-sonnet-20241022",
+                max_tokens=1024,
+                messages=[{"role": "user", "content": prompt}]
+            )
+
+            # Parse Claude's response
+            ai_response = response.content[0].text.strip()
+            # Remove markdown code blocks if present
+            if ai_response.startswith("```json"):
+                ai_response = ai_response[7:]
+            if ai_response.startswith("```"):
+                ai_response = ai_response[3:]
+            if ai_response.endswith("```"):
+                ai_response = ai_response[:-3]
+
+            tasks_data = json.loads(ai_response.strip())
+
+            return {
+                "tasks": tasks_data["tasks"][:max_tasks],
+                "total_available": len(tasks_data["tasks"]),
+                "message": f"AI-generated {len(tasks_data['tasks'][:max_tasks])} personalized tasks",
+                "ai_generated": True
+            }
+        except Exception as e:
+            print(f"AI generation failed: {e}, falling back to default tasks")
+            # Fall through to default tasks
+
+    # Fallback to default tasks
     work_tasks = [
         {
             "id": "w1",
@@ -188,14 +294,6 @@ def get_productivity_tasks(
             "title": "Prepare Presentation",
             "lastDone": "10 days ago",
             "xp": 90,
-            "category": "Work",
-            "color": "#3B3766"
-        },
-        {
-            "id": "w5",
-            "title": "Code Review Sprint",
-            "lastDone": "6 days ago",
-            "xp": 85,
             "category": "Work",
             "color": "#3B3766"
         }
@@ -240,16 +338,102 @@ def get_productivity_tasks(
     return {
         "tasks": tasks_sorted[:max_tasks],
         "total_available": len(tasks_sorted),
-        "message": f"Found {len(tasks_sorted[:max_tasks])} productivity tasks based on your calendar"
+        "message": f"Found {len(tasks_sorted[:max_tasks])} productivity tasks",
+        "ai_generated": False
     }
 
-@mcp.tool(description="Get personalized self-improvement tasks and weekly goals for the Self Improvement tab")
+@mcp.tool(description="Get AI-personalized self-improvement tasks and weekly goals using user context and patterns")
 def get_self_improvement_tasks(
+    session_id: str = "default",
     include_daily_tasks: bool = True,
-    include_weekly_goals: bool = True
+    include_weekly_goals: bool = True,
+    use_ai: bool = True
 ) -> dict:
-    """Get personalized self-improvement tasks and goals for the DoGood app"""
+    """Get AI-personalized self-improvement tasks and goals for the DoGood app"""
 
+    # Get user context if available
+    user_context = user_contexts.get(session_id, {})
+
+    # If AI is enabled and we have Claude API key and context, use AI generation
+    if use_ai and anthropic_client and user_context:
+        try:
+            # Build context string for Claude
+            context_str = f"""User Context:
+- Total XP: {user_context.get('totalXP', 0)}
+- Completed Tasks: {len(user_context.get('completedTasks', []))}
+- Current Streak: {user_context.get('currentStreak', 0)}
+
+Recent Activities:
+"""
+            for activity in user_context.get('activities', [])[-5:]:
+                context_str += f"- [{activity.get('type')}] {activity.get('description')}\n"
+
+            # Call Claude to generate personalized tasks
+            prompt = f"""Based on the user's DoGood app context below, generate personalized self-improvement tasks and weekly goals.
+Consider their patterns, interests, and what would help them grow.
+
+{context_str}
+
+Generate in this JSON format:
+{{
+    "daily_tasks": [
+        {{
+            "id": "unique_id",
+            "title": "Task Title",
+            "description": "Encouraging description with context",
+            "xp": 80,
+            "icon": "Dumbbell|Users|Book|Brain|Heart",
+            "color": "#9D5C45|#3B3766|#4A5A3C|#4A3B35"
+        }}
+    ],
+    "weekly_goals": [
+        {{
+            "id": "goal_id",
+            "title": "Goal Title",
+            "current": 3,
+            "target": 5,
+            "xp": 200,
+            "icon": "Dumbbell|Book|Brain"
+        }}
+    ]
+}}
+
+Generate {3 if include_daily_tasks else 0} daily tasks and {3 if include_weekly_goals else 0} weekly goals.
+Make them personal, encouraging, and relevant to their context. Return ONLY the JSON."""
+
+            response = anthropic_client.messages.create(
+                model="claude-3-5-sonnet-20241022",
+                max_tokens=1536,
+                messages=[{"role": "user", "content": prompt}]
+            )
+
+            # Parse Claude's response
+            ai_response = response.content[0].text.strip()
+            # Remove markdown code blocks if present
+            if ai_response.startswith("```json"):
+                ai_response = ai_response[7:]
+            if ai_response.startswith("```"):
+                ai_response = ai_response[3:]
+            if ai_response.endswith("```"):
+                ai_response = ai_response[:-3]
+
+            tasks_data = json.loads(ai_response.strip())
+
+            result = {}
+            if include_daily_tasks:
+                result["daily_tasks"] = tasks_data.get("daily_tasks", [])
+            if include_weekly_goals:
+                result["weekly_goals"] = tasks_data.get("weekly_goals", [])
+
+            result["message"] = "AI-personalized self-improvement tasks based on your patterns"
+            result["ai_generated"] = True
+
+            return result
+        except Exception as e:
+            print(f"AI generation failed: {e}, falling back to default tasks")
+            # Fall through to default tasks
+
+    # Fallback to default tasks
     daily_tasks = [
         {
             "id": "si1",
@@ -319,6 +503,7 @@ def get_self_improvement_tasks(
         result["weekly_goals"] = weekly_goals
 
     result["message"] = "Personalized self-improvement tasks based on your patterns"
+    result["ai_generated"] = False
 
     return result
 
@@ -450,6 +635,11 @@ if __name__ == "__main__":
 
     print(f"Starting DoGood FastMCP server on {host}:{port}")
     print(f"Poke integration enabled: {bool(POKE_API_KEY)}")
+    print(f"Claude AI integration enabled: {bool(ANTHROPIC_API_KEY)}")
+    if ANTHROPIC_API_KEY:
+        print(f"  ✓ AI-powered task customization ACTIVE")
+    else:
+        print(f"  ⚠ AI-powered task customization DISABLED (set ANTHROPIC_API_KEY to enable)")
 
     mcp.run(
         transport="http",

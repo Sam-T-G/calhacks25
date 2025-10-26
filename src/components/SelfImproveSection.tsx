@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 import {
@@ -10,12 +10,15 @@ import {
 	Book,
 	Heart,
 	CheckCircle,
+	Sparkles,
 } from "lucide-react";
 import { toast } from "sonner@2.0.3";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
 import { PhotoVerification } from "./PhotoVerification";
 import dgLogo from "../assets/images/dglogo.png";
+import { contextService } from "../services/contextService";
+import { getAISelfImprovementTasks } from "../services/mcpService";
 
 interface SelfImproveSectionProps {
 	onBack: () => void;
@@ -32,6 +35,10 @@ export function SelfImproveSection({
 		"reading-week": 4,
 		"meditation-week": 5,
 	});
+	const [isLoadingTasks, setIsLoadingTasks] = useState(false);
+	const [aiPersonalizedTasks, setAiPersonalizedTasks] = useState<any[]>([]);
+	const [aiWeeklyGoals, setAiWeeklyGoals] = useState<any[]>([]);
+	const [isAIGenerated, setIsAIGenerated] = useState(false);
 
 	const allPersonalizedTasks = [
 		{
@@ -71,11 +78,53 @@ export function SelfImproveSection({
 		},
 	];
 
-	const personalizedTasks = allPersonalizedTasks.filter(
+	// Load AI-generated tasks on mount
+	useEffect(() => {
+		const loadAITasks = async () => {
+			setIsLoadingTasks(true);
+			try {
+				// Sync context to MCP first
+				await contextService.syncToMCP();
+
+				// Get AI-customized tasks
+				const sessionContext = contextService.getContext();
+				const result = await getAISelfImprovementTasks(sessionContext.sessionId);
+
+				if (result.daily_tasks && result.daily_tasks.length > 0) {
+					setAiPersonalizedTasks(result.daily_tasks);
+					setIsAIGenerated(result.ai_generated || false);
+					console.log("[SelfImproveSection] Loaded AI tasks:", result);
+				}
+
+				if (result.weekly_goals && result.weekly_goals.length > 0) {
+					setAiWeeklyGoals(result.weekly_goals);
+
+					// Initialize task progress for AI goals
+					const newProgress: Record<string, number> = {};
+					result.weekly_goals.forEach((goal: any) => {
+						newProgress[goal.id] = goal.current || 0;
+					});
+					setTaskProgress((prev) => ({ ...prev, ...newProgress }));
+				}
+			} catch (error) {
+				console.error("[SelfImproveSection] Failed to load AI tasks:", error);
+			} finally {
+				setIsLoadingTasks(false);
+			}
+		};
+
+		loadAITasks();
+	}, []);
+
+	// Use AI-generated tasks if available, otherwise fallback to default
+	const tasksToDisplay =
+		aiPersonalizedTasks.length > 0 ? aiPersonalizedTasks : allPersonalizedTasks;
+
+	const personalizedTasks = tasksToDisplay.filter(
 		(task) => !completedTasks.has(task.id)
 	);
 
-	const weeklyGoals = [
+	const defaultWeeklyGoals = [
 		{
 			id: "gym-week",
 			title: "Gym Sessions",
@@ -101,6 +150,8 @@ export function SelfImproveSection({
 			icon: Brain,
 		},
 	];
+
+	const weeklyGoals = aiWeeklyGoals.length > 0 ? aiWeeklyGoals : defaultWeeklyGoals;
 
 	const handleComplete = (taskId: string, xp: number, title: string) => {
 		if (!completedTasks.has(taskId)) {
@@ -223,7 +274,11 @@ export function SelfImproveSection({
 				{/* Personalized Tasks */}
 				<div className="mb-6">
 					<div className="flex items-center gap-2 mb-4">
-						<TrendingUp className="w-5 h-5" style={{ color: "#4A5A3C" }} />
+						{isAIGenerated ? (
+							<Sparkles className="w-5 h-5" style={{ color: "#4A5A3C" }} />
+						) : (
+							<TrendingUp className="w-5 h-5" style={{ color: "#4A5A3C" }} />
+						)}
 						<h3
 							style={{
 								fontFamily: "Cooper Black, Cooper Std, serif",
@@ -231,8 +286,14 @@ export function SelfImproveSection({
 								fontSize: "20px",
 								color: "#405169",
 							}}>
-							Personalized for You
+							{isAIGenerated ? "AI-Personalized for You" : "Personalized for You"}
 						</h3>
+						{isLoadingTasks && (
+							<div
+								className="ml-2 w-4 h-4 border-2 border-t-transparent rounded-full animate-spin"
+								style={{ borderColor: "#4A5A3C" }}
+							/>
+						)}
 					</div>
 
 					<div className="grid gap-3 grid-cols-1">

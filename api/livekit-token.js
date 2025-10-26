@@ -23,15 +23,17 @@ export default async function handler(req, res) {
     const roomName = req.query.roomName || `dogood-${Date.now()}`;
     const participantName = req.query.participantName || `user-${Math.floor(Math.random() * 10000)}`;
 
-    // Get user context from query params (passed from frontend)
+    // Get user context and session ID from query params (passed from frontend)
     const userContext = req.query.userContext || '';
+    const sessionId = req.query.sessionId || 'default';
 
     const at = new AccessToken(apiKey, apiSecret, {
       identity: participantName,
       ttl: '10m', // Token valid for 10 minutes
-      // Store user context in token metadata for voice agent access
+      // Store user context and session ID in token metadata for voice agent access
       metadata: JSON.stringify({
         userContext: userContext,
+        sessionId: sessionId,
       }),
     });
 
