@@ -9,6 +9,19 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// In-memory session store for context
+const sessionStore = new Map();
+
+// Clean up old sessions periodically
+setInterval(() => {
+  const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
+  for (const [sessionId, context] of sessionStore.entries()) {
+    if (context.sessionStartTime < dayAgo) {
+      sessionStore.delete(sessionId);
+    }
+  }
+}, 60 * 60 * 1000); // Run every hour
+
 app.get('/api/livekit-token', async (req, res) => {
   try {
     const apiKey = process.env.LIVEKIT_API_KEY;
@@ -48,6 +61,35 @@ app.get('/api/livekit-token', async (req, res) => {
       message: error.message
     });
   }
+});
+
+// Context API endpoints
+app.get('/api/context', async (req, res) => {
+  const { sessionId } = req.query;
+
+  if (!sessionId) {
+    return res.status(400).json({ error: 'sessionId is required' });
+  }
+
+  const context = sessionStore.get(sessionId);
+  if (!context) {
+    return res.status(404).json({ error: 'Session not found' });
+  }
+
+  res.status(200).json(context);
+});
+
+app.post('/api/context', async (req, res) => {
+  const { sessionId } = req.query;
+  const context = req.body;
+
+  if (!sessionId || !context) {
+    return res.status(400).json({ error: 'sessionId and context are required' });
+  }
+
+  sessionStore.set(sessionId, context);
+  console.log(`[Context] Stored context for session ${sessionId}`);
+  res.status(200).json({ success: true, context });
 });
 
 const PORT = 3001;

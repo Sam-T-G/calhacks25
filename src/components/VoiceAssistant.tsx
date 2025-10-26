@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { LiveKitRoom, useVoiceAssistant, BarVisualizer, RoomAudioRenderer } from '@livekit/components-react';
 import '@livekit/components-styles';
+import { contextService } from '../services/contextService';
 
 interface VoiceAssistantProps {
   isActive: boolean;
@@ -25,6 +26,10 @@ export function VoiceAssistant({ isActive, onClose }: VoiceAssistantProps) {
     setError('');
 
     try {
+      // Sync context to backend before starting voice session
+      // This allows the voice agent to access user context
+      await contextService.syncToBackend();
+
       const response = await fetch('/api/livekit-token');
 
       if (!response.ok) {
