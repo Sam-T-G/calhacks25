@@ -101,9 +101,10 @@ export function PhotoVerification({
 						return;
 					}
 
+					// Auto-submit photo for verification immediately
 					setSelectedPhoto(imageData);
 					setHasPhoto(true);
-					setIsOpen(true);
+					await verifyPhoto(imageData);
 				} catch (error) {
 					console.error("Error processing image:", error);
 					toast.error("Image Processing Error", {
@@ -120,38 +121,12 @@ export function PhotoVerification({
 		}
 	};
 
-	const handleSubmitPhoto = () => {
-		// Just close the dialog - photo is saved
-		setIsOpen(false);
-		toast.success("Photo saved!", {
-			description: "Click the checkmark to verify and complete the task.",
-		});
-	};
-
-	const handleCancel = () => {
-		setIsOpen(false);
-		setSelectedPhoto(null);
-		setHasPhoto(false);
-		// Reset the file input
-		if (fileInputRef.current) {
-			fileInputRef.current.value = "";
-		}
-	};
-
-	const handleCheckmarkClick = async () => {
-		if (!hasPhoto || !selectedPhoto) {
-			toast.error("Photo Required", {
-				description: "Please take a photo to verify task completion.",
-			});
-			return;
-		}
-
-		// Verify the photo with Claude
+	const verifyPhoto = async (imageData: string) => {
 		setIsVerifying(true);
 
 		try {
 			const result = await claudeService.verifyPhotoCompletion(
-				selectedPhoto,
+				imageData,
 				taskTitle,
 				taskDescription,
 				isMultiStep,
@@ -173,14 +148,24 @@ export function PhotoVerification({
 				// Call onVerified to update progress
 				onVerified();
 			} else {
-				// Verification failed - Show prominent error dialog
+				// Verification failed - Discard photo and show error
 				setIsVerifying(false);
+				setSelectedPhoto(null);
+				setHasPhoto(false);
+				if (fileInputRef.current) {
+					fileInputRef.current.value = "";
+				}
 				setErrorTitle("Verification Failed");
 				setErrorMessage(result.message);
 				setErrorDialogOpen(true);
 			}
 		} catch (error) {
 			setIsVerifying(false);
+			setSelectedPhoto(null);
+			setHasPhoto(false);
+			if (fileInputRef.current) {
+				fileInputRef.current.value = "";
+			}
 			setErrorTitle("Verification Error");
 			setErrorMessage("Could not verify photo. Please try again.");
 			setErrorDialogOpen(true);
@@ -203,6 +188,7 @@ export function PhotoVerification({
 					size="sm"
 					type="button"
 					onClick={handleCameraClick}
+					disabled={isVerifying}
 					className="h-9 border-0 px-3"
 					style={
 						buttonOnly
@@ -215,100 +201,13 @@ export function PhotoVerification({
 							: {}
 					}
 					variant={buttonOnly ? undefined : "outline"}>
-					<Camera className="w-4 h-4" />
-				</Button>
-
-				{/* Checkmark Icon - only enabled when photo uploaded */}
-				<Button
-					size="sm"
-					type="button"
-					onClick={handleCheckmarkClick}
-					disabled={!hasPhoto || isVerifying}
-					className="h-9 border-0 px-3"
-					style={{
-						backgroundColor: hasPhoto && !isVerifying ? "#4A5A3C" : "#D4C883",
-						fontFamily: "Cooper Black, Cooper Std, serif",
-						fontWeight: 700,
-						boxShadow: "0 4px 6px rgba(0,0,0,0.15)",
-						opacity: hasPhoto && !isVerifying ? 1 : 0.5,
-						cursor: hasPhoto && !isVerifying ? "pointer" : "not-allowed",
-					}}>
 					{isVerifying ? (
 						<div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
 					) : (
-						<CheckCircle className="w-4 h-4" />
+						<Camera className="w-4 h-4" />
 					)}
 				</Button>
 			</div>
-
-			<Dialog open={isOpen} onOpenChange={setIsOpen}>
-				<DialogContent
-					className="max-w-[70%] p-4"
-					style={{ backgroundColor: "#FAF7EB" }}>
-					<DialogHeader>
-						<DialogTitle
-							style={{
-								fontFamily: "Cooper Black, Cooper Std, serif",
-								fontWeight: 900,
-								fontSize: "16px",
-								color: "#405169",
-							}}>
-							Verify Completion
-						</DialogTitle>
-						<DialogDescription
-							className="text-xs"
-							style={{
-								fontFamily: "Cooper Black, Cooper Std, serif",
-								color: "#5A5A5A",
-							}}>
-							{taskTitle}
-						</DialogDescription>
-					</DialogHeader>
-
-					{selectedPhoto && (
-						<div
-							className="relative rounded-lg overflow-hidden"
-							style={{ backgroundColor: "#E8DC93" }}>
-							<img
-								src={selectedPhoto}
-								alt="Task verification"
-								className="w-full h-auto max-h-[25vh] object-contain"
-							/>
-							<button
-								onClick={handleCancel}
-								className="absolute top-2 right-2 p-1.5 rounded-full text-white transition-colors touch-manipulation"
-								style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
-								<X className="w-3 h-3" />
-							</button>
-						</div>
-					)}
-
-					<DialogFooter className="gap-2 flex-col">
-						<Button
-							onClick={handleSubmitPhoto}
-							className="w-full h-9 border-0 text-sm"
-							style={{
-								backgroundColor: "#405169",
-								fontFamily: "Cooper Black, Cooper Std, serif",
-								fontWeight: 700,
-								boxShadow: "0 4px 6px rgba(0,0,0,0.15)",
-							}}>
-							<CheckCircle className="w-3 h-3 mr-2" />
-							Save Photo
-						</Button>
-						<Button
-							variant="outline"
-							onClick={handleCancel}
-							className="w-full h-9 text-sm"
-							style={{
-								fontFamily: "Cooper Black, Cooper Std, serif",
-								fontWeight: 700,
-							}}>
-							Cancel
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
 
 			{/* Error Alert Dialog - Centered and Prominent */}
 			<AlertDialog open={errorDialogOpen} onOpenChange={setErrorDialogOpen}>
