@@ -314,7 +314,9 @@ export function ServeSection({
 				className="relative z-10 max-w-4xl mx-auto px-6 md:px-8 pb-6"
 				style={{ paddingTop: "110px" }}>
 				{isLoading ? (
-					<div className="flex items-center justify-center py-12">
+					<div
+						className="flex items-center justify-center"
+						style={{ height: "calc(100vh - 110px)", marginTop: "-110px" }}>
 						<div className="text-center">
 							<RefreshCw
 								className="w-8 h-8 animate-spin mx-auto mb-2"

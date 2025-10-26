@@ -217,10 +217,17 @@ function buildGenerationPrompt(preferences) {
 		}
 	}
 
-	return `Generate a diverse set of community service activities for a gamified volunteering app. ${
-		preferencesText ||
-		"\n\nNo specific user preferences provided, so generate a diverse, interesting mix."
-	}
+	return `You are a creative activity generator for a gamified volunteering app. Generate RANDOM, DIVERSE, and UNIQUE community service activities every time.
+
+IMPORTANT:
+- Make each set of activities DIFFERENT from previous generations
+- Use random, creative titles and locations
+- Vary XP amounts, durations, and dates
+- Include mix of single-step and multi-step activities
+- Be creative with the activity ideas
+
+User context:
+${preferencesText || "No specific preferences - be diverse and creative."}
 
 Please generate activities in the following JSON format:
 
@@ -273,21 +280,26 @@ Please generate activities in the following JSON format:
 }
 \`\`\`
 
-Requirements:
-- Generate 4 community opportunities
-- Generate 2 crisis alerts (make them realistic and relevant)
-- Generate 3 mini-games (make them fun, achievable challenges)
-- Make activities diverse and interesting
-- Use realistic locations and times
-- Make dates within the next week
-- XP should reflect time/effort required
-- Be creative with mini-game ideas (environmental, social, educational)
+RANDOMIZATION REQUIREMENTS:
+- Vary ALL aspects: locations, titles, dates, times, XP amounts, durations
+- Pick DIFFERENT activities each time (mix donation drives, cleanup events, tutoring, food banks, workshops, etc.)
+- Use RANDOM neighborhoods and locations (different each generation)
+- Include diverse causes: environment, education, hunger, homelessness, animal welfare, community, etc.
+- Mix high and low XP activities
+- Vary between single and multi-step activities randomly
+- Use creative, engaging titles that haven't been used before
 
-Progress Tracking:
-- For activities that are repeatable (like "Recycle 20 cans"), set requiresMultiple: true, totalRequired: 20, and progressDescription: "cans recycled"
-- For one-time activities, set requiresMultiple: false and totalRequired: 1
-- Examples of multi-step activities: collecting items, serving meals, planting trees, etc.
-- Make at least 1-2 activities in each category use progress tracking
+Quantities:
+- Generate 4 community opportunities (mix single and multi-step)
+- Generate 2 crisis alerts (vary urgency levels)
+- Generate 3 mini-games (environmental, social, educational themes)
+
+Quality:
+- Use realistic, RANDOM locations and times
+- Make dates within the next week (vary them)
+- XP should reflect time/effort (100-400 for opportunities, 150-400 for alerts, 40-100 for games)
+- Make multi-step activities have totalRequired between 5-50
+- Include varied progress descriptions
 
 Generate only the JSON, no additional text.`;
 }
