@@ -155,7 +155,7 @@ export function Home({ xpPoints, onNavigate, onVoiceAssistant }: HomeProps) {
 					href="https://yerbamadre.com/"
 					target="_blank"
 					rel="noopener noreferrer"
-					className="mt-24 mb-12 mx-auto hover:opacity-70 transition-opacity block"
+					className="mt-32 mb-12 mx-auto hover:opacity-70 transition-opacity block"
 					style={{ maxWidth: "50px" }}>
 					<img src={yerbImage} alt="Yerba Madre" className="w-full h-auto" />
 				</a>

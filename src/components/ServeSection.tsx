@@ -393,6 +393,16 @@ export function ServeSection({
 													}}>
 													{opp.title}
 												</h3>
+												{opp.description && (
+													<p
+														className="mb-2 text-sm opacity-80"
+														style={{
+															fontFamily: "Cooper Black, Cooper Std, serif",
+															color: "#405169",
+														}}>
+														{opp.description}
+													</p>
+												)}
 												<div className="flex flex-col gap-2 mb-3 text-xs">
 													<div
 														className="flex items-center gap-1 opacity-70"
@@ -609,6 +619,16 @@ export function ServeSection({
 													}}>
 													{alert.location}
 												</p>
+												{alert.description && (
+													<p
+														className="mb-2 text-sm opacity-70"
+														style={{
+															fontFamily: "Cooper Black, Cooper Std, serif",
+															color: "#405169",
+														}}>
+														{alert.description}
+													</p>
+												)}
 												<div
 													className="flex items-center gap-1 mb-3 text-xs opacity-70"
 													style={{ color: "#405169" }}>
