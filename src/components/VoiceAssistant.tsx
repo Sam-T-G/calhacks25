@@ -4,16 +4,19 @@ import {
 	useVoiceAssistant,
 	BarVisualizer,
 	RoomAudioRenderer,
+	useDataChannel,
 } from "@livekit/components-react";
 import "@livekit/components-styles";
 import { contextService } from "../services/contextService";
+import { Section } from "../App";
 
 interface VoiceAssistantProps {
 	isActive: boolean;
 	onClose: () => void;
+	onNavigate?: (section: Section) => void;
 }
 
-export function VoiceAssistant({ isActive, onClose }: VoiceAssistantProps) {
+export function VoiceAssistant({ isActive, onClose, onNavigate }: VoiceAssistantProps) {
 	const [token, setToken] = useState<string>("");
 	const [wsUrl, setWsUrl] = useState<string>("");
 	const [isConnecting, setIsConnecting] = useState(false);
@@ -184,7 +187,10 @@ export function VoiceAssistant({ isActive, onClose }: VoiceAssistantProps) {
 							audio={true}
 							video={false}
 							onDisconnected={handleDisconnect}>
-							<VoiceAssistantContent onEndConvo={handleDisconnect} />
+							<VoiceAssistantContent
+								onEndConvo={handleDisconnect}
+								onNavigate={onNavigate}
+							/>
 						</LiveKitRoom>
 					</div>
 				</div>
@@ -193,8 +199,66 @@ export function VoiceAssistant({ isActive, onClose }: VoiceAssistantProps) {
 	);
 }
 
-function VoiceAssistantContent({ onEndConvo }: { onEndConvo: () => void }) {
-	const { state, audioTrack } = useVoiceAssistant();
+function VoiceAssistantContent({
+	onEndConvo,
+	onNavigate,
+}: {
+	onEndConvo: () => void;
+	onNavigate?: (section: Section) => void;
+}) {
+	const { state, audioTrack, agentTranscript } = useVoiceAssistant();
+
+	// Listen for agent transcripts to detect navigation intent
+	useEffect(() => {
+		if (!agentTranscript || !onNavigate) return;
+
+		const text = agentTranscript.toLowerCase();
+
+		// Map keywords to sections
+		const navigationMap: Record<string, Section> = {
+			'serve': 'serve',
+			'service': 'serve',
+			'volunteer': 'serve',
+			'productivity': 'productivity',
+			'productive': 'productivity',
+			'tasks': 'productivity',
+			'self-improve': 'self-improve',
+			'self improve': 'self-improve',
+			'improvement': 'self-improve',
+			'better': 'self-improve',
+			'shop': 'shop',
+			'store': 'shop',
+			'rewards': 'shop',
+			'stats': 'stats',
+			'statistics': 'stats',
+			'progress': 'stats',
+			'home': 'home',
+		};
+
+		// Check if the agent is saying it will take them somewhere
+		if (text.includes('take you to') || text.includes('let me take you') || text.includes('taking you to')) {
+			for (const [keyword, section] of Object.entries(navigationMap)) {
+				if (text.includes(keyword)) {
+					console.log(`[VoiceAssistant] Detected navigation to ${section}`);
+					contextService.logActivity(
+						"custom",
+						`DoGood Companion directed navigation to ${section} section`
+					);
+
+					// Navigate after a brief delay
+					setTimeout(() => {
+						onNavigate(section);
+						// Close assistant after navigation
+						setTimeout(() => {
+							onEndConvo();
+						}, 1500);
+					}, 1000);
+
+					break;
+				}
+			}
+		}
+	}, [agentTranscript, onNavigate, onEndConvo]);
 
 	return (
 		<div className="flex flex-col items-center gap-6 w-full">

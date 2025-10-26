@@ -120,6 +120,7 @@ export default function App() {
 			<VoiceAssistant
 				isActive={isVoiceAssistantActive}
 				onClose={() => setIsVoiceAssistantActive(false)}
+				onNavigate={setCurrentSection}
 			/>
 			<Toaster />
 		</div>
