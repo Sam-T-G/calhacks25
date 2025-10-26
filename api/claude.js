@@ -11,6 +11,8 @@
  * - Any Node.js backend
  */
 
+import mcpClient from "./mcpClient.js";
+
 // For Vercel/Netlify Serverless Functions
 export default async function handler(req, res) {
 	// Only allow POST requests
@@ -38,9 +40,11 @@ export default async function handler(req, res) {
 		const { action, ...params } = req.body;
 
 		let claudeRequest;
+		let useMCP = process.env.ENABLE_MCP_INTEGRATION !== "false"; // Enabled by default
 
+		// Handle generate_activities with MCP integration
 		if (action === "generate_activities") {
-			claudeRequest = buildActivityGenerationRequest(params);
+			return await handleGenerateActivitiesWithMCP(req, res, params, CLAUDE_API_KEY, useMCP);
 		} else if (action === "verify_photo") {
 			claudeRequest = buildPhotoVerificationRequest(params);
 		} else if (action === "orchestrate") {
@@ -75,6 +79,107 @@ export default async function handler(req, res) {
 		return res.status(500).json({
 			error: error.message || "Internal server error",
 		});
+	}
+}
+
+/**
+ * Handle activity generation with MCP integration
+ */
+async function handleGenerateActivitiesWithMCP(req, res, params, CLAUDE_API_KEY, useMCP) {
+	try {
+		let mcpContext = {};
+
+		// Step 1: Try to get context from MCP (if enabled)
+		if (useMCP) {
+			try {
+				console.log("[MCP] Attempting to connect and retrieve user context...");
+				await mcpClient.connect();
+				mcpContext = await mcpClient.getUserContext(["preferences", "activities", "tasks"]);
+				console.log("[MCP] Retrieved user context successfully");
+			} catch (mcpError) {
+				console.warn("[MCP] Failed to get context, continuing without MCP:", mcpError.message);
+				useMCP = false; // Disable MCP for this request
+			}
+		}
+
+		// Step 2: Generate activities with Claude
+		const claudeRequest = buildActivityGenerationRequest({
+			...params,
+			mcpContext, // Pass MCP context to Claude
+		});
+
+		const response = await fetch("https://api.anthropic.com/v1/messages", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				"x-api-key": CLAUDE_API_KEY,
+				"anthropic-version": "2023-06-01",
+			},
+			body: JSON.stringify(claudeRequest),
+		});
+
+		if (!response.ok) {
+			const errorData = await response.json().catch(() => ({}));
+			throw new Error(errorData.error?.message || response.statusText || "API error");
+		}
+
+		const data = await response.json();
+
+		// Step 3: Parse activities from Claude's response
+		const activities = parseActivitiesFromClaude(data);
+
+		// Step 4: Enhance activities with MCP (if enabled)
+		let finalActivities = activities;
+
+		if (useMCP && activities) {
+			try {
+				console.log("[MCP] Enhancing activities with Interaction CO...");
+				finalActivities = await mcpClient.enhanceActivities(activities, mcpContext);
+				console.log("[MCP] Activities enhanced successfully");
+
+				// Optionally inject top activities back into context
+				if (finalActivities.communityOpportunities && finalActivities.communityOpportunities.length > 0) {
+					const topActivity = finalActivities.communityOpportunities[0];
+					await mcpClient.injectActivity(topActivity, "serve", 8);
+				}
+			} catch (mcpError) {
+				console.warn("[MCP] Failed to enhance activities, using original:", mcpError.message);
+			}
+		}
+
+		// Return enhanced activities in Claude's response format
+		return res.status(200).json({
+			...data,
+			content: [
+				{
+					type: "text",
+					text: JSON.stringify(finalActivities),
+				},
+			],
+			_mcp_enhanced: useMCP,
+		});
+	} catch (error) {
+		console.error("[MCP] Error in activity generation:", error);
+		return res.status(500).json({
+			error: error.message || "Internal server error",
+		});
+	}
+}
+
+/**
+ * Parse activities from Claude's response
+ */
+function parseActivitiesFromClaude(claudeResponse) {
+	try {
+		const text = claudeResponse.content[0]?.text || "{}";
+		return JSON.parse(text);
+	} catch (error) {
+		console.error("Failed to parse Claude response:", error);
+		return {
+			communityOpportunities: [],
+			crisisAlerts: [],
+			miniGames: [],
+		};
 	}
 }
 
