@@ -324,22 +324,6 @@ function VoiceAssistantContent({
 			onClaudeCommand(payload);
 		};
 
-		// Also listen for participant chat messages
-		const handleChatMessage = (message: string, participant: any) => {
-			console.log(
-				"[VoiceAssistant] 💬 Chat message received:",
-				message,
-				"from",
-				participant?.identity
-			);
-			onClaudeCommand(message);
-		};
-
-		// Listen to room for all events to catch any communication
-		const handleRoomEvent = (event: any) => {
-			console.log("[VoiceAssistant] Room event:", event);
-		};
-
 		room.on(RoomEvent.DataReceived, handleData);
 
 		// Listen for all room events to debug

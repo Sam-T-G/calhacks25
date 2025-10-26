@@ -885,29 +885,16 @@ export function ServeSection({
 				)}
 
 				{/* Refresh Button at Bottom of Content */}
-				<div className="flex justify-center py-6 pb-12">
-					{isRegenerating ? (
-						<div className="flex items-center gap-3">
-							<div
-								className="w-8 h-8 rounded-full"
-								style={{
-									borderTop: "4px solid transparent",
-									borderRight: "4px solid #405169",
-									borderBottom: "4px solid #405169",
-									borderLeft: "4px solid #405169",
-									animation: "spin 0.8s linear infinite",
-								}}></div>
-							<span
-								style={{
-									fontFamily: "Cooper Black, Cooper Std, serif",
-									fontWeight: 700,
-									color: "#405169",
-									fontSize: "16px",
-								}}>
-								Refreshing...
-							</span>
+				<div className="flex justify-center py-6 pb-12 mt-12">
+					{isRegenerating && !isLoading ? (
+						<div className="spinner-container">
+							<div className="spinner-ring"></div>
+							<div className="spinner-ring"></div>
+							<div className="spinner-ring"></div>
+							<div className="spinner-ring"></div>
+							<div className="spinner-ring"></div>
 						</div>
-					) : (
+					) : !isLoading ? (
 						<Button
 							variant="ghost"
 							onClick={handleRegenerate}
@@ -921,12 +908,67 @@ export function ServeSection({
 							<RefreshCw className="w-5 h-5 mr-2" />
 							Refresh Activities
 						</Button>
-					)}
+					) : null}
 				</div>
 				<style>{`
-					@keyframes spin {
-						0% { transform: rotate(0deg); }
-						100% { transform: rotate(360deg); }
+					.spinner-container {
+						width: 50px;
+						height: 50px;
+						position: relative;
+						display: flex;
+						align-items: center;
+						justify-content: center;
+					}
+
+					.spinner-ring {
+						position: absolute;
+						border: 3px solid #405169;
+						border-radius: 50%;
+						animation: spinner-rotate 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+					}
+
+					.spinner-ring:nth-child(1) {
+						width: 40px;
+						height: 40px;
+						border-color: #405169 transparent transparent transparent;
+						animation-delay: -0.45s;
+					}
+
+					.spinner-ring:nth-child(2) {
+						width: 32px;
+						height: 32px;
+						border-color: #3B3766 transparent transparent transparent;
+						animation-delay: -0.3s;
+					}
+
+					.spinner-ring:nth-child(3) {
+						width: 24px;
+						height: 24px;
+						border-color: #9D5C45 transparent transparent transparent;
+						animation-delay: -0.15s;
+					}
+
+					.spinner-ring:nth-child(4) {
+						width: 16px;
+						height: 16px;
+						border-color: #C4B77D transparent transparent transparent;
+						animation-delay: 0s;
+					}
+
+					.spinner-ring:nth-child(5) {
+						width: 8px;
+						height: 8px;
+						border-color: #D4C883 transparent transparent transparent;
+						animation-delay: 0.15s;
+					}
+
+					@keyframes spinner-rotate {
+						0% {
+							transform: rotate(0deg);
+						}
+						100% {
+							transform: rotate(360deg);
+						}
 					}
 				`}</style>
 			</div>
