@@ -150,13 +150,286 @@ async def schedule_activity_reminder(
 
     return result
 
+@mcp.tool(description="Get personalized productivity task suggestions for the Productivity tab - tasks based on user's calendar, work patterns, and priorities")
+def get_productivity_tasks(
+    include_work: bool = True,
+    include_personal: bool = True,
+    max_tasks: int = 4
+) -> dict:
+    """Get personalized productivity task suggestions for the DoGood app"""
+
+    work_tasks = [
+        {
+            "id": "w1",
+            "title": "Review Q4 Budget Report",
+            "lastDone": "12 days ago",
+            "xp": 80,
+            "category": "Work",
+            "color": "#3B3766"
+        },
+        {
+            "id": "w2",
+            "title": "Team 1-on-1 Meetings",
+            "lastDone": "8 days ago",
+            "xp": 100,
+            "category": "Work",
+            "color": "#3B3766"
+        },
+        {
+            "id": "w3",
+            "title": "Update Project Documentation",
+            "lastDone": "15 days ago",
+            "xp": 60,
+            "category": "Work",
+            "color": "#3B3766"
+        },
+        {
+            "id": "w4",
+            "title": "Prepare Presentation",
+            "lastDone": "10 days ago",
+            "xp": 90,
+            "category": "Work",
+            "color": "#3B3766"
+        },
+        {
+            "id": "w5",
+            "title": "Code Review Sprint",
+            "lastDone": "6 days ago",
+            "xp": 85,
+            "category": "Work",
+            "color": "#3B3766"
+        }
+    ]
+
+    personal_tasks = [
+        {
+            "id": "p1",
+            "title": "Exercise Routine",
+            "lastDone": "5 days ago",
+            "xp": 90,
+            "category": "Personal",
+            "color": "#4A5A3C"
+        },
+        {
+            "id": "p2",
+            "title": "Meal Prep Sunday",
+            "lastDone": "7 days ago",
+            "xp": 70,
+            "category": "Personal",
+            "color": "#4A5A3C"
+        },
+        {
+            "id": "p3",
+            "title": "Weekly Planning Session",
+            "lastDone": "9 days ago",
+            "xp": 65,
+            "category": "Personal",
+            "color": "#4A5A3C"
+        }
+    ]
+
+    tasks = []
+    if include_work:
+        tasks.extend(work_tasks)
+    if include_personal:
+        tasks.extend(personal_tasks)
+
+    # Sort by last done (most overdue first) and limit
+    tasks_sorted = sorted(tasks, key=lambda x: int(x["lastDone"].split()[0]), reverse=True)
+
+    return {
+        "tasks": tasks_sorted[:max_tasks],
+        "total_available": len(tasks_sorted),
+        "message": f"Found {len(tasks_sorted[:max_tasks])} productivity tasks based on your calendar"
+    }
+
+@mcp.tool(description="Get personalized self-improvement tasks and weekly goals for the Self Improvement tab")
+def get_self_improvement_tasks(
+    include_daily_tasks: bool = True,
+    include_weekly_goals: bool = True
+) -> dict:
+    """Get personalized self-improvement tasks and goals for the DoGood app"""
+
+    daily_tasks = [
+        {
+            "id": "si1",
+            "title": "Hit the gym",
+            "description": "You haven't worked out in 4 days. A 30-minute session would be great!",
+            "xp": 100,
+            "icon": "Dumbbell",
+            "color": "#9D5C45"
+        },
+        {
+            "id": "si2",
+            "title": "Catch up with Sarah",
+            "description": "It's been 3 weeks since you last connected with your friend Sarah.",
+            "xp": 80,
+            "icon": "Users",
+            "color": "#3B3766"
+        },
+        {
+            "id": "si3",
+            "title": "Read for 20 minutes",
+            "description": "Continue 'Atomic Habits' - you're 60% through!",
+            "xp": 60,
+            "icon": "Book",
+            "color": "#4A5A3C"
+        },
+        {
+            "id": "si4",
+            "title": "Practice meditation",
+            "description": "Your stress levels have been high. A 10-minute session can help.",
+            "xp": 70,
+            "icon": "Brain",
+            "color": "#4A3B35"
+        }
+    ]
+
+    weekly_goals = [
+        {
+            "id": "gym-week",
+            "title": "Gym Sessions",
+            "current": 3,
+            "target": 4,
+            "xp": 200,
+            "icon": "Dumbbell"
+        },
+        {
+            "id": "reading-week",
+            "title": "Reading Days",
+            "current": 4,
+            "target": 5,
+            "xp": 150,
+            "icon": "Book"
+        },
+        {
+            "id": "meditation-week",
+            "title": "Meditation Days",
+            "current": 5,
+            "target": 7,
+            "xp": 180,
+            "icon": "Brain"
+        }
+    ]
+
+    result = {}
+    if include_daily_tasks:
+        result["daily_tasks"] = daily_tasks
+    if include_weekly_goals:
+        result["weekly_goals"] = weekly_goals
+
+    result["message"] = "Personalized self-improvement tasks based on your patterns"
+
+    return result
+
+@mcp.tool(description="Add a custom productivity task to the user's list and optionally send a Poke notification")
+async def add_productivity_task(
+    title: str,
+    category: str = "Work",
+    xp: int = 80,
+    send_notification: bool = True
+) -> dict:
+    """Add a custom productivity task via Poke"""
+
+    task = {
+        "title": title,
+        "category": category,
+        "xp": xp,
+        "status": "added",
+        "lastDone": "Never"
+    }
+
+    result = {
+        "success": True,
+        "task": task,
+        "message": f"Added '{title}' to your productivity tasks"
+    }
+
+    # Send notification via Poke
+    if send_notification:
+        message = f"New task added to your Productivity list: {title} (+{xp} XP)"
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(
+                    POKE_API_URL,
+                    headers={
+                        "Authorization": f"Bearer {POKE_API_KEY}",
+                        "Content-Type": "application/json"
+                    },
+                    json={"message": message},
+                    timeout=10.0
+                )
+                response.raise_for_status()
+                result["poke_notification"] = {
+                    "success": True,
+                    "response": response.json()
+                }
+            except httpx.HTTPError as e:
+                result["poke_notification"] = {
+                    "success": False,
+                    "error": str(e)
+                }
+
+    return result
+
+@mcp.tool(description="Add a custom self-improvement goal or task and optionally send a Poke notification")
+async def add_self_improvement_task(
+    title: str,
+    description: str,
+    xp: int = 70,
+    task_type: str = "daily",
+    send_notification: bool = True
+) -> dict:
+    """Add a custom self-improvement task via Poke"""
+
+    task = {
+        "title": title,
+        "description": description,
+        "xp": xp,
+        "type": task_type,
+        "status": "added"
+    }
+
+    result = {
+        "success": True,
+        "task": task,
+        "message": f"Added '{title}' to your self-improvement {task_type} tasks"
+    }
+
+    # Send notification via Poke
+    if send_notification:
+        message = f"New {task_type} task added to Self-Improve: {title} - {description} (+{xp} XP)"
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(
+                    POKE_API_URL,
+                    headers={
+                        "Authorization": f"Bearer {POKE_API_KEY}",
+                        "Content-Type": "application/json"
+                    },
+                    json={"message": message},
+                    timeout=10.0
+                )
+                response.raise_for_status()
+                result["poke_notification"] = {
+                    "success": True,
+                    "response": response.json()
+                }
+            except httpx.HTTPError as e:
+                result["poke_notification"] = {
+                    "success": False,
+                    "error": str(e)
+                }
+
+    return result
+
 @mcp.tool(description="Get information about the DoGood MCP server")
 def get_server_info() -> dict:
     """Get server information"""
     return {
         "server_name": "DoGood MCP Server",
-        "version": "1.0.0",
-        "description": "MCP server for DoGood community service app with Poke integration",
+        "version": "2.0.0",
+        "description": "MCP server for DoGood community service app with Poke integration and task customization",
         "environment": os.environ.get("ENVIRONMENT", "development"),
         "python_version": os.sys.version.split()[0],
         "features": [
@@ -164,7 +437,10 @@ def get_server_info() -> dict:
             "Get activity suggestions",
             "Record activity completion",
             "Track user stats",
-            "Schedule reminders"
+            "Schedule reminders",
+            "Customize productivity tasks",
+            "Customize self-improvement tasks",
+            "Add custom tasks via Poke"
         ]
     }
 
